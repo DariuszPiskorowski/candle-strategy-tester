@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { Candle } from "@/lib/candles";
 import { bollinger, ema, macd, rsi, sma } from "@/lib/indicators";
-import type { BacktestResult } from "@/lib/backtest";
+import type { StrategyResult } from "@/lib/strategy/jarvis";
 
 export type IndicatorSettings = {
   ma1: { on: boolean; length: number; type: "SMA" | "EMA" };
@@ -16,11 +16,12 @@ type Props = {
   candles: Candle[];
   indicators: IndicatorSettings;
   chartType: "candles" | "bars" | "line" | "area";
-  backtest?: BacktestResult | null;
+  strategy?: StrategyResult | null;
+  showPlots?: boolean;
   onHover?: (c: Candle | null) => void;
 };
 
-export function TradingChart({ candles, indicators, chartType, backtest, onHover }: Props) {
+export function TradingChart({ candles, indicators, chartType, strategy, showPlots = true, onHover }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hoverRef = useRef(onHover);
   hoverRef.current = onHover;
@@ -150,24 +151,46 @@ export function TradingChart({ candles, indicators, chartType, backtest, onHover
         pane++;
       }
 
-      if (backtest?.trades.length) {
-        const markers = backtest.trades.flatMap((t) => [
-          {
-            time: t.entryTime,
-            position: "belowBar" as const,
-            color: up,
-            shape: "arrowUp" as const,
-            text: "BUY",
-          },
-          {
-            time: t.exitTime,
-            position: "aboveBar" as const,
-            color: t.pnlPct >= 0 ? up : down,
-            shape: "arrowDown" as const,
-            text: `SELL ${t.pnlPct.toFixed(1)}%`,
-          },
-        ]);
+      if (strategy) {
+        if (showPlots) for (const pl of strategy.plots) if (pl.data.length) addLine(pl.data, pl.color, 0, pl.width);
+        const markers = strategy.trades
+          .flatMap((t) => [
+            {
+              time: t.entryTime,
+              position: "belowBar" as const,
+              color: "#2962ff",
+              shape: "arrowUp" as const,
+              text: `Long @${t.entryPrice.toPrecision(5)}`,
+            },
+            ...(t.exitReason === "Otwarta"
+              ? []
+              : [
+                  {
+                    time: t.exitTime,
+                    position: "aboveBar" as const,
+                    color: t.pnl >= 0 ? up : down,
+                    shape: "arrowDown" as const,
+                    text: `${t.exitReason === "STOP_LOSS" ? "SL" : "SELL"} ${t.pnlPct >= 0 ? "+" : ""}${t.pnlPct.toFixed(2)}%`,
+                  },
+                ]),
+          ])
+          .sort((a, b) => a.time - b.time);
         lc.createSeriesMarkers(main, markers as any);
+        const eq = chart.addSeries(
+          lc.AreaSeries,
+          {
+            lineColor: "#2962ff",
+            topColor: "rgba(41,98,255,0.3)",
+            bottomColor: "rgba(41,98,255,0.02)",
+            lineWidth: 2,
+            priceLineVisible: false,
+            title: "Kapitał",
+          },
+          pane,
+        );
+        eq.setData(strategy.equity as any);
+        chart.panes()[pane]?.setHeight(130);
+        pane++;
       }
 
       chart.subscribeCrosshairMove((param) => {
@@ -187,7 +210,7 @@ export function TradingChart({ candles, indicators, chartType, backtest, onHover
       disposed = true;
       cleanup();
     };
-  }, [candles, indicators, chartType, backtest]);
+  }, [candles, indicators, chartType, strategy, showPlots]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 }
