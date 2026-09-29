@@ -147,9 +147,6 @@ function Index() {
     >
       {/* Top bar */}
       <header className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
-        <span className="mr-2 font-mono text-sm font-semibold tracking-tight text-primary">
-          CandleLab
-        </span>
         <button className="tv-btn" onClick={() => inputRef.current?.click()}>
           Wczytaj plik
         </button>
