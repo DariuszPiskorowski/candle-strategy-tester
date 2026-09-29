@@ -47,6 +47,8 @@ function Index() {
   const [stratDragging, setStratDragging] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [indMenuOpen, setIndMenuOpen] = useState(false);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const stratInputRef = useRef<HTMLInputElement>(null);
   const indMenuRef = useRef<HTMLDivElement>(null);
@@ -75,10 +77,18 @@ function Index() {
   }, []);
 
   const baseInterval = useMemo(() => (raw.length ? detectInterval(raw) : 60), [raw]);
-  const candles = useMemo(
-    () => (tf && tf > baseInterval ? aggregate(raw, tf) : raw),
-    [raw, tf, baseInterval],
-  );
+  const dateBounds = useMemo(() => {
+    if (!raw.length) return { min: "", max: "" };
+    const toISO = (t: number) => new Date(t * 1000).toISOString().slice(0, 10);
+    return { min: toISO(raw[0].time), max: toISO(raw[raw.length - 1].time) };
+  }, [raw]);
+  const candles = useMemo(() => {
+    const base = tf && tf > baseInterval ? aggregate(raw, tf) : raw;
+    if (!fromDate && !toDate) return base;
+    const from = fromDate ? Date.parse(`${fromDate}T00:00:00Z`) / 1000 : -Infinity;
+    const to = toDate ? Date.parse(`${toDate}T23:59:59Z`) / 1000 : Infinity;
+    return base.filter((c) => c.time >= from && c.time <= to);
+  }, [raw, tf, baseInterval, fromDate, toDate]);
 
   async function loadStrategy(files: File[]) {
     const f = files[0];
@@ -118,6 +128,8 @@ function Index() {
       const names = files.map((f) => f.name.replace(/\.customization$/i, "")).join(" + ");
       setFileName(merge && base.length ? `${fileName} + ${names}` : names);
       setTf(null);
+      setFromDate("");
+      setToDate("");
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Nie udało się odczytać pliku.");
@@ -184,6 +196,40 @@ function Index() {
         <span className="font-mono text-xs text-muted-foreground">
           {fileName} · {candles.length} świec
         </span>
+
+        <div className="tv-divider" />
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <span>Zakres:</span>
+          <input
+            type="date"
+            className="tv-btn px-1.5 py-0.5 font-mono text-xs [color-scheme:dark]"
+            value={fromDate}
+            min={dateBounds.min}
+            max={toDate || dateBounds.max}
+            onChange={(e) => setFromDate(e.target.value)}
+          />
+          <span>–</span>
+          <input
+            type="date"
+            className="tv-btn px-1.5 py-0.5 font-mono text-xs [color-scheme:dark]"
+            value={toDate}
+            min={fromDate || dateBounds.min}
+            max={dateBounds.max}
+            onChange={(e) => setToDate(e.target.value)}
+          />
+          {(fromDate || toDate) && (
+            <button
+              className="tv-btn px-1.5 py-0.5"
+              title="Wyczyść zakres dat"
+              onClick={() => {
+                setFromDate("");
+                setToDate("");
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
 
         <div className="tv-divider" />
         <div className="flex items-center gap-0.5">
