@@ -126,7 +126,7 @@ export function StrategyPanel({ header, params, onParams, result, showPlots, onS
                   className="tv-input w-20"
                   type={p.kind === "timeframe" ? "text" : "number"}
                   step={p.step ?? (p.kind === "float" ? 0.1 : 1)}
-                  value={p.value}
+                  value={p.value as number | string}
                   onChange={(e) => {
                     const next = [...params];
                     next[idx] = {
