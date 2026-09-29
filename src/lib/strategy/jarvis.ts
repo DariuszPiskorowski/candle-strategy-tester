@@ -152,7 +152,10 @@ export function runJarvis(
   const n = candles.length;
   const num = (k: string, d: number) => (typeof p[k] === "number" ? (p[k] as number) : d);
   const bool = (k: string, d: boolean) => (typeof p[k] === "boolean" ? (p[k] as boolean) : d);
-  const useSidewaysFilter = bool("useSidewaysFilter", true);
+  const useSidewaysFilter = bool("useSidewaysFilter", false);
+  const sLook = Math.max(2, Math.round(num("sidewaysLookback", 6)));
+  const sMaxRange = num("sidewaysMaxRangePct", 3) / 100;
+  const sMaxBody = num("sidewaysMaxAvgBodyPct", 1) / 100;
   const period = num("period", 5);
   const res = String(p.res ?? "D");
   const riskPerTrade = num("riskPerTrade", 1) / 100;
@@ -258,10 +261,19 @@ export function runJarvis(
     // 2) script on bar close
     const ok = (...v: number[]) => v.every(Number.isFinite);
     const valid = ok(hma1[i], hma2[i], D1[i], D2[i], macd[i], aMacd[i], lead1[i], lead2[i]);
-    // Sideways filter: price inside the Ichimoku cloud = ranging market, skip entries
-    const sideways =
-      Number.isFinite(lead1[i]) && Number.isFinite(lead2[i]) &&
-      price[i] >= Math.min(lead1[i], lead2[i]) && price[i] <= Math.max(lead1[i], lead2[i]);
+    // Sideways filter (from Pine): small total range AND small average body over lookback
+    let sideways = false;
+    if (useSidewaysFilter && i >= sLook - 1) {
+      let hi = -Infinity, lo = Infinity, body = 0;
+      for (let k = i - sLook + 1; k <= i; k++) {
+        const ck = candles[k];
+        hi = Math.max(hi, ck.high);
+        lo = Math.min(lo, ck.low);
+        body += ck.open > 0 ? Math.abs(ck.close - ck.open) / ck.open : 0;
+      }
+      const rangePct = c.close > 0 ? (hi - lo) / c.close : 0;
+      sideways = rangePct < sMaxRange && body / sLook < sMaxBody;
+    }
     const longC =
       valid && hma1[i] > hma2[i] && D1[i] > D2[i] && macd[i] > aMacd[i] && price[i] > hma2[i] && lead1[i] > lead2[i] &&
       (!useSidewaysFilter || !sideways);
