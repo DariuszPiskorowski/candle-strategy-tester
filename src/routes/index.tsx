@@ -128,6 +128,8 @@ function Index() {
       const names = files.map((f) => f.name.replace(/\.customization$/i, "")).join(" + ");
       setFileName(merge && base.length ? `${fileName} + ${names}` : names);
       setTf(null);
+      setFromDate("");
+      setToDate("");
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Nie udało się odczytać pliku.");
@@ -194,6 +196,40 @@ function Index() {
         <span className="font-mono text-xs text-muted-foreground">
           {fileName} · {candles.length} świec
         </span>
+
+        <div className="tv-divider" />
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <span>Zakres:</span>
+          <input
+            type="date"
+            className="tv-btn px-1.5 py-0.5 font-mono text-xs [color-scheme:dark]"
+            value={fromDate}
+            min={dateBounds.min}
+            max={toDate || dateBounds.max}
+            onChange={(e) => setFromDate(e.target.value)}
+          />
+          <span>–</span>
+          <input
+            type="date"
+            className="tv-btn px-1.5 py-0.5 font-mono text-xs [color-scheme:dark]"
+            value={toDate}
+            min={fromDate || dateBounds.min}
+            max={dateBounds.max}
+            onChange={(e) => setToDate(e.target.value)}
+          />
+          {(fromDate || toDate) && (
+            <button
+              className="tv-btn px-1.5 py-0.5"
+              title="Wyczyść zakres dat"
+              onClick={() => {
+                setFromDate("");
+                setToDate("");
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
 
         <div className="tv-divider" />
         <div className="flex items-center gap-0.5">
