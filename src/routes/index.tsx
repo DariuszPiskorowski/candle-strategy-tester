@@ -77,10 +77,18 @@ function Index() {
   }, []);
 
   const baseInterval = useMemo(() => (raw.length ? detectInterval(raw) : 60), [raw]);
-  const candles = useMemo(
-    () => (tf && tf > baseInterval ? aggregate(raw, tf) : raw),
-    [raw, tf, baseInterval],
-  );
+  const dateBounds = useMemo(() => {
+    if (!raw.length) return { min: "", max: "" };
+    const toISO = (t: number) => new Date(t * 1000).toISOString().slice(0, 10);
+    return { min: toISO(raw[0].time), max: toISO(raw[raw.length - 1].time) };
+  }, [raw]);
+  const candles = useMemo(() => {
+    const base = tf && tf > baseInterval ? aggregate(raw, tf) : raw;
+    if (!fromDate && !toDate) return base;
+    const from = fromDate ? Date.parse(`${fromDate}T00:00:00Z`) / 1000 : -Infinity;
+    const to = toDate ? Date.parse(`${toDate}T23:59:59Z`) / 1000 : Infinity;
+    return base.filter((c) => c.time >= from && c.time <= to);
+  }, [raw, tf, baseInterval, fromDate, toDate]);
 
   async function loadStrategy(files: File[]) {
     const f = files[0];
