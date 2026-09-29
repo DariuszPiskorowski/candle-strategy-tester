@@ -65,18 +65,32 @@ function Index() {
     [strategyOn, candles, fastLen, slowLen],
   );
 
-  async function loadFile(file: File) {
+  async function loadFiles(files: File[], merge: boolean) {
     try {
-      const parsed = parseCandles(await file.text());
-      if (!parsed.length) throw new Error("Brak rozpoznanych świec w pliku.");
-      setRaw(parsed);
-      setFileName(file.name);
+      const lists: Candle[][] = [];
+      for (const f of files) {
+        const parsed = parseCandles(await f.text());
+        if (!parsed.length) throw new Error(`Brak rozpoznanych świec w pliku ${f.name}.`);
+        lists.push(parsed);
+      }
+      const base = merge ? raw : [];
+      const intervals = [...(base.length ? [base] : []), ...lists].map(detectInterval);
+      if (new Set(intervals).size > 1)
+        throw new Error("Pliki mają różne interwały świec — nie można ich połączyć.");
+      const map = new Map<number, Candle>();
+      for (const c of base) map.set(c.time, c);
+      for (const l of lists) for (const c of l) map.set(c.time, c);
+      const mergedList = [...map.values()].sort((a, b) => a.time - b.time);
+      setRaw(mergedList);
+      const names = files.map((f) => f.name).join(" + ");
+      setFileName(merge && base.length ? `${fileName} + ${names}` : names);
       setTf(null);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Nie udało się odczytać pliku.");
     }
   }
+  const mergeRef = useRef<HTMLInputElement>(null);
 
   const last = hover ?? candles[candles.length - 1];
   const prev = last ? candles[candles.indexOf(last) - 1] : undefined;
@@ -94,8 +108,8 @@ function Index() {
       onDrop={(e) => {
         e.preventDefault();
         setDragging(false);
-        const f = e.dataTransfer.files?.[0];
-        if (f) void loadFile(f);
+        const fs = Array.from(e.dataTransfer.files ?? []);
+        if (fs.length) void loadFiles(fs, true);
       }}
     >
       {/* Top bar */}
@@ -106,14 +120,35 @@ function Index() {
         <button className="tv-btn" onClick={() => inputRef.current?.click()}>
           Wczytaj plik
         </button>
+        <button
+          className="tv-btn"
+          title="Połącz z aktualnymi danymi (np. wcześniejszy zakres dat)"
+          onClick={() => mergeRef.current?.click()}
+        >
+          + Dołącz plik
+        </button>
         <input
           ref={inputRef}
           type="file"
+          multiple
           accept=".customization,.json,.txt,.csv"
           className="hidden"
           onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) void loadFile(f);
+            const fs = Array.from(e.target.files ?? []);
+            if (fs.length) void loadFiles(fs, false);
+            e.target.value = "";
+          }}
+        />
+        <input
+          ref={mergeRef}
+          type="file"
+          multiple
+          accept=".customization,.json,.txt,.csv"
+          className="hidden"
+          onChange={(e) => {
+            const fs = Array.from(e.target.files ?? []);
+            if (fs.length) void loadFiles(fs, true);
+            e.target.value = "";
           }}
         />
         <span className="max-w-[220px] truncate font-mono text-xs text-muted-foreground">
