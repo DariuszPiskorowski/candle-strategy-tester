@@ -26,11 +26,11 @@ export const Route = createFileRoute("/")({
 });
 
 const DEFAULTS: IndicatorSettings = {
-  ma1: { on: true, length: 50, type: "SMA" },
-  ma2: { on: true, length: 200, type: "SMA" },
+  ma1: { on: false, length: 50, type: "SMA" },
+  ma2: { on: false, length: 200, type: "SMA" },
   bb: { on: false, length: 20, mult: 2 },
-  volume: true,
-  rsi: { on: true, length: 14 },
+  volume: false,
+  rsi: { on: false, length: 14 },
   macd: { on: false, fast: 12, slow: 26, signal: 9 },
 };
 
