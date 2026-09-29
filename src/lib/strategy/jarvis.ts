@@ -258,8 +258,13 @@ export function runJarvis(
     // 2) script on bar close
     const ok = (...v: number[]) => v.every(Number.isFinite);
     const valid = ok(hma1[i], hma2[i], D1[i], D2[i], macd[i], aMacd[i], lead1[i], lead2[i]);
+    // Sideways filter: price inside the Ichimoku cloud = ranging market, skip entries
+    const sideways =
+      Number.isFinite(lead1[i]) && Number.isFinite(lead2[i]) &&
+      price[i] >= Math.min(lead1[i], lead2[i]) && price[i] <= Math.max(lead1[i], lead2[i]);
     const longC =
-      valid && hma1[i] > hma2[i] && D1[i] > D2[i] && macd[i] > aMacd[i] && price[i] > hma2[i] && lead1[i] > lead2[i];
+      valid && hma1[i] > hma2[i] && D1[i] > D2[i] && macd[i] > aMacd[i] && price[i] > hma2[i] && lead1[i] > lead2[i] &&
+      (!useSidewaysFilter || !sideways);
     const sellC =
       valid && hma1[i] < hma2[i] && D1[i] < D2[i] && macd[i] < aMacd[i] && price[i] < hma2[i] && lead1[i] < lead2[i];
 

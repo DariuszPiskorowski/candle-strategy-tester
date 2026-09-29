@@ -110,6 +110,17 @@ export function StrategyPanel({ header, params, onParams, result, showPlots, onS
               </span>
               {p.kind === "source" ? (
                 <span className="font-mono">close</span>
+              ) : p.kind === "bool" ? (
+                <input
+                  type="checkbox"
+                  className="tv-check"
+                  checked={p.value === true}
+                  onChange={(e) => {
+                    const next = [...params];
+                    next[idx] = { ...p, value: e.target.checked };
+                    onParams(next);
+                  }}
+                />
               ) : (
                 <input
                   className="tv-input w-20"
