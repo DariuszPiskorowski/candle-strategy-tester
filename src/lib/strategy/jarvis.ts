@@ -280,7 +280,7 @@ export function runJarvis(
       }
     }
 
-    if (pos) stopPlot.push({ time: time[i], value: pos.stop });
+    stopPlot.push(pos ? { time: time[i], value: pos.stop } : ({ time: time[i] } as { time: number; value: number }));
     const openPnl = pos ? pos.qty * (close[i] - pos.entryPrice) : 0;
     equity.push({ time: time[i], value: cash + openPnl });
   }
