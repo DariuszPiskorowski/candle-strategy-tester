@@ -46,7 +46,25 @@ function Index() {
   const [fastLen, setFastLen] = useState(20);
   const [slowLen, setSlowLen] = useState(50);
   const [dragging, setDragging] = useState(false);
+  const [indMenuOpen, setIndMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const indMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!indMenuOpen) return;
+    const close = (e: MouseEvent) => {
+      if (!indMenuRef.current?.contains(e.target as Node)) setIndMenuOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIndMenuOpen(false);
+    };
+    window.addEventListener("mousedown", close);
+    window.addEventListener("keydown", esc);
+    return () => {
+      window.removeEventListener("mousedown", close);
+      window.removeEventListener("keydown", esc);
+    };
+  }, [indMenuOpen]);
 
   useEffect(() => {
     fetch("/data/demo-candles.json")
