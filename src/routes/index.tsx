@@ -47,6 +47,8 @@ function Index() {
   const [stratDragging, setStratDragging] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [indMenuOpen, setIndMenuOpen] = useState(false);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const stratInputRef = useRef<HTMLInputElement>(null);
   const indMenuRef = useRef<HTMLDivElement>(null);
