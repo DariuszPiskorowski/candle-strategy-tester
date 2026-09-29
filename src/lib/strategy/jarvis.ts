@@ -4,8 +4,8 @@ import type { Candle } from "@/lib/candles";
 
 export type PineInput = {
   name: string;
-  kind: "int" | "float" | "timeframe" | "source";
-  value: number | string;
+  kind: "int" | "float" | "timeframe" | "source" | "bool";
+  value: number | string | boolean;
   title: string;
   step?: number;
 };
@@ -18,15 +18,16 @@ export type PineHeader = {
 
 export function parsePineInputs(code: string): PineInput[] {
   const out: PineInput[] = [];
-  const re = /^\s*(\w+)\s*=\s*input\.(int|float|timeframe|source)\(([^\n]*)\)/gm;
+  const re = /^\s*(\w+)\s*=\s*input\.(int|float|timeframe|source|bool)\(([^\n]*)\)/gm;
   let m: RegExpExecArray | null;
   while ((m = re.exec(code))) {
     const [, name, kind, args] = m;
     const first = args.split(",")[0].trim();
     const title = /title\s*=\s*"([^"]*)"/.exec(args)?.[1] ?? name;
     const step = /step\s*=\s*([\d.]+)/.exec(args)?.[1];
-    let value: number | string = first.replace(/^"|"$/g, "");
+    let value: number | string | boolean = first.replace(/^"|"$/g, "");
     if (kind === "int" || kind === "float") value = Number(first);
+    if (kind === "bool") value = first.trim() === "true";
     out.push({ name, kind: kind as PineInput["kind"], value, title, ...(step ? { step: Number(step) } : {}) });
   }
   return out;
