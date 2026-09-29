@@ -3,7 +3,6 @@ import { ClientOnly } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TradingChart, type IndicatorSettings } from "@/components/chart/TradingChart";
 import { aggregate, detectInterval, parseCandles, TIMEFRAMES, type Candle } from "@/lib/candles";
-import { smaCrossBacktest } from "@/lib/backtest";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -42,12 +41,12 @@ function Index() {
   const [chartType, setChartType] = useState<"candles" | "bars" | "line" | "area">("candles");
   const [ind, setInd] = useState<IndicatorSettings>(DEFAULTS);
   const [hover, setHover] = useState<Candle | null>(null);
-  const [strategyOn, setStrategyOn] = useState(false);
-  const [fastLen, setFastLen] = useState(20);
-  const [slowLen, setSlowLen] = useState(50);
+  const [strategy, setStrategy] = useState<{ name: string; code: string } | null>(null);
+  const [stratDragging, setStratDragging] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [indMenuOpen, setIndMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const stratInputRef = useRef<HTMLInputElement>(null);
   const indMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -78,10 +77,14 @@ function Index() {
     () => (tf && tf > baseInterval ? aggregate(raw, tf) : raw),
     [raw, tf, baseInterval],
   );
-  const backtest = useMemo(
-    () => (strategyOn && candles.length ? smaCrossBacktest(candles, fastLen, slowLen) : null),
-    [strategyOn, candles, fastLen, slowLen],
-  );
+
+  async function loadStrategy(files: File[]) {
+    const f = files[0];
+    if (!f) return;
+    const text = await f.text();
+    setStrategy({ name: f.name, code: text });
+  }
+
 
   async function loadFiles(files: File[], merge: boolean) {
     try {
