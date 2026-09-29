@@ -27,7 +27,7 @@ export function parsePineInputs(code: string): PineInput[] {
     const step = /step\s*=\s*([\d.]+)/.exec(args)?.[1];
     let value: number | string = first.replace(/^"|"$/g, "");
     if (kind === "int" || kind === "float") value = Number(first);
-    out.push({ name, kind: kind as PineInput["kind"], value, title, step: step ? Number(step) : undefined });
+    out.push({ name, kind: kind as PineInput["kind"], value, title, ...(step ? { step: Number(step) } : {}) });
   }
   return out;
 }
