@@ -46,7 +46,25 @@ function Index() {
   const [fastLen, setFastLen] = useState(20);
   const [slowLen, setSlowLen] = useState(50);
   const [dragging, setDragging] = useState(false);
+  const [indMenuOpen, setIndMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const indMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!indMenuOpen) return;
+    const close = (e: MouseEvent) => {
+      if (!indMenuRef.current?.contains(e.target as Node)) setIndMenuOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIndMenuOpen(false);
+    };
+    window.addEventListener("mousedown", close);
+    window.addEventListener("keydown", esc);
+    return () => {
+      window.removeEventListener("mousedown", close);
+      window.removeEventListener("keydown", esc);
+    };
+  }, [indMenuOpen]);
 
   useEffect(() => {
     fetch("/data/demo-candles.json")
@@ -169,6 +187,139 @@ function Index() {
         </div>
 
         <div className="tv-divider" />
+        <div className="relative" ref={indMenuRef}>
+          <button
+            className={`tv-btn ${indMenuOpen ? "tv-tf-active" : ""}`}
+            onClick={() => setIndMenuOpen((v) => !v)}
+          >
+            Wskaźniki ▾
+          </button>
+          {indMenuOpen && (
+            <div className="absolute left-0 top-full z-40 mt-1 w-[260px] space-y-2 rounded-md border border-border bg-card p-3 shadow-xl">
+              <h2 className="tv-h">Wskaźniki</h2>
+              {([1, 2] as const).map((n) => {
+                const key = n === 1 ? "ma1" : "ma2";
+                const cfg = ind[key];
+                return (
+                  <div key={key} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="tv-check"
+                      checked={cfg.on}
+                      onChange={(e) => setInd({ ...ind, [key]: { ...cfg, on: e.target.checked } })}
+                    />
+                    <select
+                      className="tv-input w-16"
+                      value={cfg.type}
+                      onChange={(e) =>
+                        setInd({ ...ind, [key]: { ...cfg, type: e.target.value as "SMA" | "EMA" } })
+                      }
+                    >
+                      <option>SMA</option>
+                      <option>EMA</option>
+                    </select>
+                    <input
+                      type="number"
+                      className="tv-input w-16"
+                      value={cfg.length}
+                      min={1}
+                      onChange={(e) =>
+                        setInd({ ...ind, [key]: { ...cfg, length: Number(e.target.value) || 1 } })
+                      }
+                    />
+                    <span
+                      className="h-1 w-5 rounded"
+                      style={{ background: n === 1 ? "#f7c744" : "#7e57c2" }}
+                    />
+                  </div>
+                );
+              })}
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="tv-check"
+                  checked={ind.bb.on}
+                  onChange={(e) => setInd({ ...ind, bb: { ...ind.bb, on: e.target.checked } })}
+                />
+                <span className="flex-1 text-xs">Bollinger</span>
+                <input
+                  type="number"
+                  className="tv-input w-14"
+                  value={ind.bb.length}
+                  onChange={(e) =>
+                    setInd({ ...ind, bb: { ...ind.bb, length: Number(e.target.value) || 1 } })
+                  }
+                />
+                <input
+                  type="number"
+                  step={0.5}
+                  className="tv-input w-14"
+                  value={ind.bb.mult}
+                  onChange={(e) =>
+                    setInd({ ...ind, bb: { ...ind.bb, mult: Number(e.target.value) || 2 } })
+                  }
+                />
+              </div>
+
+              <label className="flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  className="tv-check"
+                  checked={ind.volume}
+                  onChange={(e) => setInd({ ...ind, volume: e.target.checked })}
+                />
+                Wolumen
+              </label>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="tv-check"
+                  checked={ind.rsi.on}
+                  onChange={(e) => setInd({ ...ind, rsi: { ...ind.rsi, on: e.target.checked } })}
+                />
+                <span className="flex-1 text-xs">RSI</span>
+                <input
+                  type="number"
+                  className="tv-input w-14"
+                  value={ind.rsi.length}
+                  onChange={(e) =>
+                    setInd({ ...ind, rsi: { ...ind.rsi, length: Number(e.target.value) || 1 } })
+                  }
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="tv-check"
+                  checked={ind.macd.on}
+                  onChange={(e) => setInd({ ...ind, macd: { ...ind.macd, on: e.target.checked } })}
+                />
+                <span className="flex-1 text-xs">MACD</span>
+                <input
+                  type="number"
+                  className="tv-input w-12"
+                  value={ind.macd.fast}
+                  onChange={(e) =>
+                    setInd({ ...ind, macd: { ...ind.macd, fast: Number(e.target.value) || 12 } })
+                  }
+                />
+                <input
+                  type="number"
+                  className="tv-input w-12"
+                  value={ind.macd.slow}
+                  onChange={(e) =>
+                    setInd({ ...ind, macd: { ...ind.macd, slow: Number(e.target.value) || 26 } })
+                  }
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="tv-divider" />
         <div className="flex items-center gap-0.5">
           {(["candles", "bars", "line", "area"] as const).map((t) => (
             <button
@@ -232,128 +383,6 @@ function Index() {
         {/* Right panel */}
         <aside className="w-[270px] shrink-0 space-y-4 overflow-y-auto border-l border-border p-3">
           <section className="space-y-2">
-            <h2 className="tv-h">Wskaźniki</h2>
-            {([1, 2] as const).map((n) => {
-              const key = n === 1 ? "ma1" : "ma2";
-              const cfg = ind[key];
-              return (
-                <div key={key} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    className="tv-check"
-                    checked={cfg.on}
-                    onChange={(e) => setInd({ ...ind, [key]: { ...cfg, on: e.target.checked } })}
-                  />
-                  <select
-                    className="tv-input w-16"
-                    value={cfg.type}
-                    onChange={(e) =>
-                      setInd({ ...ind, [key]: { ...cfg, type: e.target.value as "SMA" | "EMA" } })
-                    }
-                  >
-                    <option>SMA</option>
-                    <option>EMA</option>
-                  </select>
-                  <input
-                    type="number"
-                    className="tv-input w-16"
-                    value={cfg.length}
-                    min={1}
-                    onChange={(e) =>
-                      setInd({ ...ind, [key]: { ...cfg, length: Number(e.target.value) || 1 } })
-                    }
-                  />
-                  <span
-                    className="h-1 w-5 rounded"
-                    style={{ background: n === 1 ? "#f7c744" : "#7e57c2" }}
-                  />
-                </div>
-              );
-            })}
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="tv-check"
-                checked={ind.bb.on}
-                onChange={(e) => setInd({ ...ind, bb: { ...ind.bb, on: e.target.checked } })}
-              />
-              <span className="flex-1 text-xs">Bollinger</span>
-              <input
-                type="number"
-                className="tv-input w-14"
-                value={ind.bb.length}
-                onChange={(e) =>
-                  setInd({ ...ind, bb: { ...ind.bb, length: Number(e.target.value) || 1 } })
-                }
-              />
-              <input
-                type="number"
-                step={0.5}
-                className="tv-input w-14"
-                value={ind.bb.mult}
-                onChange={(e) =>
-                  setInd({ ...ind, bb: { ...ind.bb, mult: Number(e.target.value) || 2 } })
-                }
-              />
-            </div>
-
-            <label className="flex items-center gap-2 text-xs">
-              <input
-                type="checkbox"
-                className="tv-check"
-                checked={ind.volume}
-                onChange={(e) => setInd({ ...ind, volume: e.target.checked })}
-              />
-              Wolumen
-            </label>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="tv-check"
-                checked={ind.rsi.on}
-                onChange={(e) => setInd({ ...ind, rsi: { ...ind.rsi, on: e.target.checked } })}
-              />
-              <span className="flex-1 text-xs">RSI</span>
-              <input
-                type="number"
-                className="tv-input w-14"
-                value={ind.rsi.length}
-                onChange={(e) =>
-                  setInd({ ...ind, rsi: { ...ind.rsi, length: Number(e.target.value) || 1 } })
-                }
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="tv-check"
-                checked={ind.macd.on}
-                onChange={(e) => setInd({ ...ind, macd: { ...ind.macd, on: e.target.checked } })}
-              />
-              <span className="flex-1 text-xs">MACD</span>
-              <input
-                type="number"
-                className="tv-input w-12"
-                value={ind.macd.fast}
-                onChange={(e) =>
-                  setInd({ ...ind, macd: { ...ind.macd, fast: Number(e.target.value) || 12 } })
-                }
-              />
-              <input
-                type="number"
-                className="tv-input w-12"
-                value={ind.macd.slow}
-                onChange={(e) =>
-                  setInd({ ...ind, macd: { ...ind.macd, slow: Number(e.target.value) || 26 } })
-                }
-              />
-            </div>
-          </section>
-
-          <section className="space-y-2 border-t border-border pt-3">
             <h2 className="tv-h">Tester strategii</h2>
             <label className="flex items-center gap-2 text-xs">
               <input
