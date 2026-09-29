@@ -462,11 +462,6 @@ function Index() {
               />
             )}
           </section>
-
-          <p className="border-t border-border pt-3 text-[11px] leading-relaxed text-muted-foreground">
-            Wczytaj plik .customization / .json / .csv ze świecami. Obsługiwane formaty: tablice
-            Binance kline oraz obiekty z polami time/open/high/low/close/volume.
-          </p>
         </aside>
       </div>
     </div>
