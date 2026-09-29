@@ -146,11 +146,13 @@ export type StrategyResult = {
 
 export function runJarvis(
   candles: Candle[],
-  p: Record<string, number | string>,
+  p: Record<string, number | string | boolean>,
   header: PineHeader,
 ): StrategyResult {
   const n = candles.length;
   const num = (k: string, d: number) => (typeof p[k] === "number" ? (p[k] as number) : d);
+  const bool = (k: string, d: boolean) => (typeof p[k] === "boolean" ? (p[k] as boolean) : d);
+  const useSidewaysFilter = bool("useSidewaysFilter", true);
   const period = num("period", 5);
   const res = String(p.res ?? "D");
   const riskPerTrade = num("riskPerTrade", 1) / 100;
