@@ -105,10 +105,10 @@ export function macd(candles: Candle[], fast = 12, slow = 26, signal = 9) {
   const histogram: { time: number; value: number; color: string }[] = [];
   for (let i = 0; i < rawMacd.length; i++) {
     if (sig[i] === undefined) continue;
-    signalLine.push({ time: times[i], value: sig[i] as number });
-    const h = rawMacd[i] - (sig[i] as number);
+    signalLine.push({ time: times[i]!, value: sig[i] as number });
+    const h = rawMacd[i]! - (sig[i] as number);
     histogram.push({
-      time: times[i],
+      time: times[i]!,
       value: h,
       color: h >= 0 ? "rgba(38,166,154,0.6)" : "rgba(239,83,80,0.6)",
     });
