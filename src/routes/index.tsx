@@ -37,7 +37,7 @@ const DEFAULTS: IndicatorSettings = {
 
 function Index() {
   const [raw, setRaw] = useState<Candle[]>([]);
-  const [fileName, setFileName] = useState("poczatek");
+  const [fileName, setFileName] = useState("poczatek.customization_6");
   const [error, setError] = useState<string | null>(null);
   const [tf, setTf] = useState<number | null>(null);
   const [chartType, setChartType] = useState<"candles" | "bars" | "line" | "area">("candles");
