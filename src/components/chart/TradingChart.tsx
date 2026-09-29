@@ -99,7 +99,7 @@ export function TradingChart({ candles, indicators, chartType, backtest, onHover
           0,
         );
         vol.setData(
-          candles.map((c) => ({
+          (candles as any[]).map((c: any): any => ((c) => ({
             time: c.time,
             value: c.volume,
             color: c.close >= c.open ? "rgba(38,166,154,0.4)" : "rgba(239,83,80,0.4)",
@@ -167,7 +167,7 @@ export function TradingChart({ candles, indicators, chartType, backtest, onHover
             text: `SELL ${t.pnlPct.toFixed(1)}%`,
           },
         ]);
-        lc.createSeriesMarkers(main, markers);
+        lc.createSeriesMarkers(main, markers as any);
       }
 
       chart.subscribeCrosshairMove((param) => {
