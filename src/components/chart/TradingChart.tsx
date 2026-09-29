@@ -56,6 +56,7 @@ export function TradingChart({ candles, indicators, chartType, backtest, onHover
           vertLine: { color: "#758696", labelBackgroundColor: "#2a2e39" },
           horzLine: { color: "#758696", labelBackgroundColor: "#2a2e39" },
         },
+        localization: { locale: "pl-PL" },
         autoSize: true,
       });
 
