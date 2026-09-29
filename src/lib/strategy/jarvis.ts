@@ -207,9 +207,9 @@ export function runJarvis(
   const lead1 = conversion.map((v, i) => (v + base[i]) / 2);
   const lead2 = donchian(spanP);
 
-  const macd = hma(price, fastL).map((v, i) => v - hma(price, slowL)[i]);
-  const slow = hma(price, slowL);
-  for (let i = 0; i < n; i++) macd[i] = hma(price, fastL)[i] - slow[i];
+  const fastH = hma(price, fastL);
+  const slowH = hma(price, slowL);
+  const macd = fastH.map((v, i) => v - slowH[i]);
   const aMacd = hma(macd, sigL);
 
   const candStop = lowest(low, swingLookback).map((v) => v * (1 - swingBuffer));
