@@ -75,10 +75,10 @@ export function TradingChart({ candles, indicators, chartType, backtest, onHover
           wickUpColor: up,
           wickDownColor: down,
         });
-        main.setData(candles);
+        main.setData((candles) as any);
       } else if (chartType === "bars") {
         main = chart.addSeries(lc.BarSeries, { upColor: up, downColor: down });
-        main.setData(candles);
+        main.setData((candles) as any);
       } else if (chartType === "area") {
         main = chart.addSeries(lc.AreaSeries, {
           lineColor: "#2962ff",
@@ -86,10 +86,10 @@ export function TradingChart({ candles, indicators, chartType, backtest, onHover
           bottomColor: "rgba(41,98,255,0.02)",
           lineWidth: 2,
         });
-        main.setData(candles.map((c) => ({ time: c.time, value: c.close })));
+        main.setData((candles.map((c) => ({ time: c.time, value: c.close }))) as any);
       } else {
         main = chart.addSeries(lc.LineSeries, { color: "#2962ff", lineWidth: 2 });
-        main.setData(candles.map((c) => ({ time: c.time, value: c.close })));
+        main.setData((candles.map((c) => ({ time: c.time, value: c.close }))) as any);
       }
 
       if (indicators.volume) {
@@ -114,7 +114,7 @@ export function TradingChart({ candles, indicators, chartType, backtest, onHover
           { color, lineWidth: width as 1 | 2 | 3, priceLineVisible: false, lastValueVisible: false },
           pane,
         );
-        s.setData(data);
+        s.setData((data) as any);
         return s;
       };
 
@@ -143,7 +143,7 @@ export function TradingChart({ candles, indicators, chartType, backtest, onHover
       if (indicators.macd.on) {
         const m = macd(candles, indicators.macd.fast, indicators.macd.slow, indicators.macd.signal);
         const hist = chart.addSeries(lc.HistogramSeries, { priceLineVisible: false }, pane);
-        hist.setData(m.histogram);
+        hist.setData((m.histogram) as any);
         addLine(m.macdLine, "#2962ff", pane, 1);
         addLine(m.signalLine, "#ff9800", pane, 1);
         chart.panes()[pane]?.setHeight(120);
