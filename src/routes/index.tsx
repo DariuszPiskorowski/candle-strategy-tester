@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ClientOnly } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TradingChart, type IndicatorSettings } from "@/components/chart/TradingChart";
+import { StrategyPanel } from "@/components/strategy/StrategyPanel";
+import { isJarvisStrategy, parsePineHeader, parsePineInputs, runJarvis, type PineInput } from "@/lib/strategy/jarvis";
 import { aggregate, detectInterval, parseCandles, TIMEFRAMES, type Candle } from "@/lib/candles";
 
 export const Route = createFileRoute("/")({
@@ -83,7 +85,17 @@ function Index() {
     if (!f) return;
     const text = await f.text();
     setStrategy({ name: f.name, code: text });
+    setParams(parsePineInputs(text));
   }
+
+  const [params, setParams] = useState<PineInput[]>([]);
+  const [showPlots, setShowPlots] = useState(true);
+  const supported = strategy ? isJarvisStrategy(strategy.code) : false;
+  const header = useMemo(() => (strategy ? parsePineHeader(strategy.code) : null), [strategy]);
+  const result = useMemo(() => {
+    if (!strategy || !supported || !header || candles.length < 50) return null;
+    return runJarvis(candles, Object.fromEntries(params.map((p) => [p.name, p.value])), header);
+  }, [strategy, supported, header, candles, params]);
 
 
   async function loadFiles(files: File[], merge: boolean) {
@@ -378,12 +390,14 @@ function Index() {
               indicators={ind}
               chartType={chartType}
               onHover={setHover}
+              strategy={result}
+              showPlots={showPlots}
             />
           </ClientOnly>
         </main>
 
         {/* Right panel */}
-        <aside className="w-[270px] shrink-0 space-y-4 overflow-y-auto border-l border-border p-3">
+        <aside className="w-[340px] shrink-0 space-y-4 overflow-y-auto border-l border-border p-3">
           <section className="space-y-2">
             <h2 className="tv-h">Strategia</h2>
             <input
@@ -430,10 +444,22 @@ function Index() {
                 </button>
               </div>
             )}
-            {strategy && (
-              <p className="text-[11px] leading-relaxed text-muted-foreground">
-                Strategia załadowana i gotowa do podłączenia pod tester.
+            {strategy && !supported && (
+              <p className="text-[11px] leading-relaxed text-bear">
+                Ten skrypt nie jest jeszcze obsługiwany przez symulator. Obsługiwana jest strategia
+                Ichimoku + HullMA + Hull MACD + Jarvis RM.
               </p>
+            )}
+            {strategy && supported && header && (
+              <StrategyPanel
+                header={header}
+                params={params}
+                onParams={setParams}
+                result={result}
+                showPlots={showPlots}
+                onShowPlots={setShowPlots}
+                dec={dec}
+              />
             )}
           </section>
 
