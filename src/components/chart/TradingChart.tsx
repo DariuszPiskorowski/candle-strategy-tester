@@ -42,6 +42,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           background: { color: "transparent" },
           textColor: "#b2b5be",
           fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
+          attributionLogo: false,
           panes: { separatorColor: "rgba(255,255,255,0.12)" },
         },
         grid: { vertLines: grid, horzLines: grid },
