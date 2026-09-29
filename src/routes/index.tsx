@@ -37,7 +37,7 @@ const DEFAULTS: IndicatorSettings = {
 
 function Index() {
   const [raw, setRaw] = useState<Candle[]>([]);
-  const [fileName, setFileName] = useState("poczatek.customization");
+  const [fileName, setFileName] = useState("poczatek");
   const [error, setError] = useState<string | null>(null);
   const [tf, setTf] = useState<number | null>(null);
   const [chartType, setChartType] = useState<"candles" | "bars" | "line" | "area">("candles");
@@ -115,7 +115,7 @@ function Index() {
       for (const l of lists) for (const c of l) map.set(c.time, c);
       const mergedList = [...map.values()].sort((a, b) => a.time - b.time);
       setRaw(mergedList);
-      const names = files.map((f) => f.name).join(" + ");
+      const names = files.map((f) => f.name.replace(/\.customization$/i, "")).join(" + ");
       setFileName(merge && base.length ? `${fileName} + ${names}` : names);
       setTf(null);
       setError(null);
