@@ -37,7 +37,7 @@ const DEFAULTS: IndicatorSettings = {
 
 function Index() {
   const [raw, setRaw] = useState<Candle[]>([]);
-  const [fileName, setFileName] = useState("demo-candles.json");
+  const [fileName, setFileName] = useState("poczatek.customization");
   const [error, setError] = useState<string | null>(null);
   const [tf, setTf] = useState<number | null>(null);
   const [chartType, setChartType] = useState<"candles" | "bars" | "line" | "area">("candles");
@@ -181,7 +181,7 @@ function Index() {
             e.target.value = "";
           }}
         />
-        <span className="max-w-[220px] truncate font-mono text-xs text-muted-foreground">
+        <span className="font-mono text-xs text-muted-foreground">
           {fileName} · {candles.length} świec
         </span>
 
