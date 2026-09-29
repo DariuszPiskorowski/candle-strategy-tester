@@ -377,7 +377,6 @@ function Index() {
               candles={candles}
               indicators={ind}
               chartType={chartType}
-              backtest={backtest}
               onHover={setHover}
             />
           </ClientOnly>
@@ -386,38 +385,55 @@ function Index() {
         {/* Right panel */}
         <aside className="w-[270px] shrink-0 space-y-4 overflow-y-auto border-l border-border p-3">
           <section className="space-y-2">
-            <h2 className="tv-h">Tester strategii</h2>
-            <label className="flex items-center gap-2 text-xs">
-              <input
-                type="checkbox"
-                className="tv-check"
-                checked={strategyOn}
-                onChange={(e) => setStrategyOn(e.target.checked)}
-              />
-              Przecięcie średnich (long)
-            </label>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="flex-1 text-muted-foreground">Szybka / wolna</span>
-              <input
-                type="number"
-                className="tv-input w-14"
-                value={fastLen}
-                onChange={(e) => setFastLen(Number(e.target.value) || 1)}
-              />
-              <input
-                type="number"
-                className="tv-input w-14"
-                value={slowLen}
-                onChange={(e) => setSlowLen(Number(e.target.value) || 1)}
-              />
+            <h2 className="tv-h">Strategia</h2>
+            <input
+              ref={stratInputRef}
+              type="file"
+              accept=".pine,.ps,.txt,.customization,.json,.js"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files) void loadStrategy(Array.from(e.target.files));
+                e.target.value = "";
+              }}
+            />
+            <div
+              className={`rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground transition-colors ${
+                stratDragging ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+              }`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setStratDragging(true);
+              }}
+              onDragLeave={() => setStratDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setStratDragging(false);
+                void loadStrategy(Array.from(e.dataTransfer.files));
+              }}
+              onClick={() => stratInputRef.current?.click()}
+              role="button"
+              aria-label="Wgraj plik strategii"
+            >
+              Przeciągnij plik strategii (Pine Script) tutaj lub kliknij, aby wybrać.
             </div>
-            {backtest && (
-              <dl className="space-y-1 font-mono text-xs">
-                <Stat label="Wynik" value={`${backtest.totalPct.toFixed(2)}%`} good={backtest.totalPct >= 0} />
-                <Stat label="Transakcje" value={String(backtest.trades.length)} />
-                <Stat label="Trafność" value={`${backtest.winRate.toFixed(1)}%`} />
-                <Stat label="Max obsunięcie" value={`${backtest.maxDrawdownPct.toFixed(2)}%`} good={false} />
-              </dl>
+            {strategy && (
+              <div className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1.5 text-xs">
+                <span className="min-w-0 flex-1 truncate font-mono">{strategy.name}</span>
+                <span className="shrink-0 text-muted-foreground">{strategy.code.split("\n").length} linii</span>
+                <button
+                  className="shrink-0 text-muted-foreground hover:text-bear"
+                  aria-label="Usuń strategię"
+                  onClick={() => setStrategy(null)}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            {strategy && (
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                Strategia załadowana i gotowa do podłączenia pod tester.
+              </p>
             )}
           </section>
 
@@ -431,11 +447,3 @@ function Index() {
   );
 }
 
-function Stat({ label, value, good }: { label: string; value: string; good?: boolean }) {
-  return (
-    <div className="flex justify-between">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className={good === undefined ? "" : good ? "text-bull" : "text-bear"}>{value}</dd>
-    </div>
-  );
-}
