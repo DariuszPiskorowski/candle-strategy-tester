@@ -1,10 +1,12 @@
 import { useState } from "react";
-import type { PineHeader, PineInput, StrategyResult } from "@/lib/strategy/jarvis";
+import type { PineHeader, PineInput, StrategyColor, StrategyResult } from "@/lib/strategy/jarvis";
 
 type Props = {
   header: PineHeader;
   params: PineInput[];
   onParams: (p: PineInput[]) => void;
+  colors: StrategyColor[];
+  onColors: (colors: StrategyColor[]) => void;
   result: StrategyResult | null;
   showPlots: boolean;
   onShowPlots: (v: boolean) => void;
@@ -17,7 +19,7 @@ const fmt = (v: number, d = 2) =>
 const dt = (t: number) =>
   new Date(t * 1000).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
 
-export function StrategyPanel({ header, params, onParams, result, showPlots, onShowPlots, dec, onPdf }: Props) {
+export function StrategyPanel({ header, params, onParams, colors, onColors, result, showPlots, onShowPlots, dec, onPdf }: Props) {
   const [tab, setTab] = useState<"stats" | "trades" | "params">("stats");
   const [pdfBusy, setPdfBusy] = useState(false);
   const s = result?.stats;
@@ -157,6 +159,31 @@ export function StrategyPanel({ header, params, onParams, result, showPlots, onS
               )}
             </label>
           ))}
+          <div className="pt-2">
+            <div className="tv-h mb-1.5 border-t border-border pt-2">Kolory</div>
+            <div className="space-y-1.5">
+              {colors.map((color, idx) => (
+                <label key={color.key} className="flex items-center gap-2 text-[11px]">
+                  <span className="min-w-0 flex-1 truncate text-muted-foreground" title={color.title}>
+                    {color.title}
+                  </span>
+                  <span className="font-mono text-[10px] text-muted-foreground">{color.value}</span>
+                  <input
+                    type="color"
+                    className="h-6 w-8 cursor-pointer rounded border border-border bg-secondary p-0.5"
+                    value={color.value}
+                    title={`Zmień kolor: ${color.title}`}
+                    aria-label={`Kolor ${color.title}`}
+                    onChange={(e) => {
+                      const next = [...colors];
+                      next[idx] = { ...color, value: e.target.value };
+                      onColors(next);
+                    }}
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>

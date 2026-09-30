@@ -3,7 +3,15 @@ import { ClientOnly } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TradingChart, type IndicatorSettings } from "@/components/chart/TradingChart";
 import { StrategyPanel } from "@/components/strategy/StrategyPanel";
-import { isJarvisStrategy, parsePineHeader, parsePineInputs, runJarvis, type PineInput } from "@/lib/strategy/jarvis";
+import {
+  isJarvisStrategy,
+  parsePineHeader,
+  parsePineInputs,
+  parseStrategyColors,
+  runJarvis,
+  type PineInput,
+  type StrategyColor,
+} from "@/lib/strategy/jarvis";
 import { aggregate, detectInterval, parseCandles, TIMEFRAMES, type Candle } from "@/lib/candles";
 
 export const Route = createFileRoute("/")({
@@ -96,16 +104,18 @@ function Index() {
     const text = await f.text();
     setStrategy({ name: f.name, code: text });
     setParams(parsePineInputs(text));
+    setStrategyColors(parseStrategyColors(text));
   }
 
   const [params, setParams] = useState<PineInput[]>([]);
+  const [strategyColors, setStrategyColors] = useState<StrategyColor[]>([]);
   const [showPlots, setShowPlots] = useState(true);
   const supported = strategy ? isJarvisStrategy(strategy.code) : false;
   const header = useMemo(() => (strategy ? parsePineHeader(strategy.code) : null), [strategy]);
   const result = useMemo(() => {
     if (!strategy || !supported || !header || candles.length < 50) return null;
-    return runJarvis(candles, Object.fromEntries(params.map((p) => [p.name, p.value])), header);
-  }, [strategy, supported, header, candles, params]);
+    return runJarvis(candles, Object.fromEntries(params.map((p) => [p.name, p.value])), header, strategyColors);
+  }, [strategy, supported, header, candles, params, strategyColors]);
 
 
   async function loadFiles(files: File[], merge: boolean) {
@@ -498,6 +508,8 @@ function Index() {
                 header={header}
                 params={params}
                 onParams={setParams}
+                colors={strategyColors}
+                onColors={setStrategyColors}
                 result={result}
                 showPlots={showPlots}
                 onShowPlots={setShowPlots}

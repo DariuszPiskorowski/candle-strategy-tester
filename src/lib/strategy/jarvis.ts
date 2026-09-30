@@ -16,6 +16,76 @@ export type PineHeader = {
   commissionPct: number;
 };
 
+export type StrategyColor = {
+  key: "hmaUp" | "hmaDown" | "conversion" | "base" | "lagging" | "lead1" | "lead2" | "stop";
+  title: string;
+  value: string;
+};
+
+const PINE_COLORS: Record<string, string> = {
+  black: "#000000",
+  blue: "#2196f3",
+  green: "#089981",
+  lime: "#00e676",
+  orange: "#ff9800",
+  red: "#f23645",
+  white: "#ffffff",
+};
+
+const DEFAULT_STRATEGY_COLORS: StrategyColor[] = [
+  { key: "hmaUp", title: "HMA — wzrost", value: "#089981" },
+  { key: "hmaDown", title: "HMA — spadek", value: "#f23645" },
+  { key: "conversion", title: "Conversion Line", value: "#0496ff" },
+  { key: "base", title: "Base Line", value: "#991515" },
+  { key: "lagging", title: "Lagging Span", value: "#000000" },
+  { key: "lead1", title: "Lead 1", value: "#089981" },
+  { key: "lead2", title: "Lead 2", value: "#f23645" },
+  { key: "stop", title: "Jarvis Stop Loss", value: "#ff9800" },
+];
+
+function pineColor(value: string): string | null {
+  const hex = /#([\da-f]{6}|[\da-f]{3})\b/i.exec(value)?.[0];
+  if (hex) return hex.toLowerCase();
+  const named = /color\.([a-z]+)/i.exec(value)?.[1]?.toLowerCase();
+  return named ? PINE_COLORS[named] ?? null : null;
+}
+
+/** Reads visual plot colors without mixing them into strategy calculation inputs. */
+export function parseStrategyColors(code: string): StrategyColor[] {
+  const colors = DEFAULT_STRATEGY_COLORS.map((color) => ({ ...color }));
+  const set = (key: StrategyColor["key"], value: string | null) => {
+    const item = colors.find((color) => color.key === key);
+    if (item && value) item.value = value;
+  };
+  const assignments = new Map<string, string>();
+  for (const match of code.matchAll(/^\s*(\w+)\s*=\s*([^\n]+)$/gm)) assignments.set(match[1], match[2]);
+  const plotColors = new Map<string, string>();
+  for (const line of code.split("\n")) {
+    if (!/\bplot\s*\(/.test(line)) continue;
+    const title = /title\s*=\s*"([^"]+)"/.exec(line)?.[1];
+    const expression = /color\s*=\s*([^,)]+)/.exec(line)?.[1]?.trim();
+    if (title && expression) plotColors.set(title, expression);
+  }
+  const resolved = (expression?: string) => {
+    if (!expression) return null;
+    return pineColor(expression) ?? pineColor(assignments.get(expression) ?? "");
+  };
+  const hmaExpression = plotColors.get("HMA 1") ?? plotColors.get("HMA 2");
+  const hmaAssignment = hmaExpression ? assignments.get(hmaExpression) ?? hmaExpression : "";
+  const hmaVariants = [...hmaAssignment.matchAll(/(?:color\.[a-z]+|#[\da-f]{3,6})/gi)]
+    .map((match) => pineColor(match[0]))
+    .filter((color): color is string => Boolean(color));
+  set("hmaUp", hmaVariants[0] ?? resolved(hmaExpression));
+  set("hmaDown", hmaVariants[1] ?? resolved(hmaExpression));
+  set("conversion", resolved(plotColors.get("Conversion Line")));
+  set("base", resolved(plotColors.get("Base Line")));
+  set("lagging", resolved(plotColors.get("Lagging Span")));
+  set("lead1", resolved(plotColors.get("Lead 1")));
+  set("lead2", resolved(plotColors.get("Lead 2")));
+  set("stop", resolved(plotColors.get("Jarvis Stop Loss")));
+  return colors;
+}
+
 export function parsePineInputs(code: string): PineInput[] {
   const out: PineInput[] = [];
   const re = /^\s*(\w+)\s*=\s*input\.(int|float|timeframe|source|bool)\(([^\n]*)\)/gm;
@@ -111,7 +181,7 @@ export type Trade = {
   bars: number;
 };
 
-export type LinePlot = { title: string; color: string; width: number; data: { time: number; value: number }[] };
+export type LinePlot = { title: string; color: string; width: number; data: { time: number; value: number; color?: string }[] };
 
 export type StrategyResult = {
   trades: Trade[];
@@ -148,6 +218,7 @@ export function runJarvis(
   candles: Candle[],
   p: Record<string, number | string | boolean>,
   header: PineHeader,
+  colorSettings: StrategyColor[] = DEFAULT_STRATEGY_COLORS,
 ): StrategyResult {
   const n = candles.length;
   const num = (k: string, d: number) => (typeof p[k] === "number" ? (p[k] as number) : d);
@@ -172,6 +243,10 @@ export function runJarvis(
   const fastL = num("macdFastLength", 13);
   const slowL = num("macdSlowLength", 27);
   const comm = header.commissionPct / 100;
+  const color = (key: StrategyColor["key"]) =>
+    colorSettings.find((setting) => setting.key === key)?.value ??
+    DEFAULT_STRATEGY_COLORS.find((setting) => setting.key === key)?.value ??
+    "#ffffff";
 
   const time = candles.map((c) => c.time);
   const close = candles.map((c) => c.close);
@@ -326,24 +401,25 @@ export function runJarvis(
   }
 
   /* plots */
-  const toLine = (s: Series, off = 0) => {
-    const out: { time: number; value: number }[] = [];
+  const toLine = (s: Series, off = 0, colorAt?: (i: number) => string) => {
+    const out: { time: number; value: number; color?: string }[] = [];
     for (let i = 0; i < n; i++) {
       const j = i + off;
       if (j < 0 || j >= n || !Number.isFinite(s[i])) continue;
-      out.push({ time: time[j], value: s[i] });
+      out.push({ time: time[j], value: s[i], ...(colorAt ? { color: colorAt(i) } : {}) });
     }
     return out;
   };
+  const hmaColor = (i: number) => (hma1[i] > hma2[i] ? color("hmaUp") : color("hmaDown"));
   const plots: LinePlot[] = [
-    { title: "HMA 1", color: "#00e676", width: 2, data: toLine(hma1) },
-    { title: "HMA 2", color: "#ff5252", width: 2, data: toLine(hma2) },
-    { title: "Conversion Line", color: "#0496ff", width: 1, data: toLine(conversion) },
-    { title: "Base Line", color: "#c62828", width: 1, data: toLine(base) },
-    { title: "Lagging Span", color: "#9e9e9e", width: 1, data: toLine(price, -disp) },
-    { title: "Lead 1", color: "rgba(76,175,80,0.8)", width: 1, data: toLine(lead1, disp) },
-    { title: "Lead 2", color: "rgba(244,67,54,0.8)", width: 1, data: toLine(lead2, disp) },
-    { title: "Jarvis Stop Loss", color: "#ff9800", width: 2, data: stopPlot },
+    { title: "HMA 1", color: color("hmaUp"), width: 2, data: toLine(hma1, 0, hmaColor) },
+    { title: "HMA 2", color: color("hmaUp"), width: 2, data: toLine(hma2, 0, hmaColor) },
+    { title: "Conversion Line", color: color("conversion"), width: 1, data: toLine(conversion) },
+    { title: "Base Line", color: color("base"), width: 1, data: toLine(base) },
+    { title: "Lagging Span", color: color("lagging"), width: 1, data: toLine(price, -disp) },
+    { title: "Lead 1", color: color("lead1"), width: 1, data: toLine(lead1, disp) },
+    { title: "Lead 2", color: color("lead2"), width: 1, data: toLine(lead2, disp) },
+    { title: "Jarvis Stop Loss", color: color("stop"), width: 2, data: stopPlot },
   ];
 
   /* stats */
