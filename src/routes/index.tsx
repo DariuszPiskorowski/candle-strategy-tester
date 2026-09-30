@@ -502,6 +502,18 @@ function Index() {
                 showPlots={showPlots}
                 onShowPlots={setShowPlots}
                 dec={dec}
+                onPdf={async () => {
+                  if (!result) return;
+                  const { downloadStrategyPdf } = await import("@/lib/strategy/report");
+                  await downloadStrategyPdf({
+                    header,
+                    params,
+                    result,
+                    dec,
+                    dataLabel: `${fileName} · ${candles.length} świec`,
+                    range: candles.length ? { from: candles[0].time, to: candles[candles.length - 1].time } : null,
+                  });
+                }}
               />
             )}
           </section>

@@ -9,6 +9,7 @@ type Props = {
   showPlots: boolean;
   onShowPlots: (v: boolean) => void;
   dec: number;
+  onPdf?: () => Promise<void>;
 };
 
 const fmt = (v: number, d = 2) =>
@@ -16,8 +17,9 @@ const fmt = (v: number, d = 2) =>
 const dt = (t: number) =>
   new Date(t * 1000).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
 
-export function StrategyPanel({ header, params, onParams, result, showPlots, onShowPlots, dec }: Props) {
+export function StrategyPanel({ header, params, onParams, result, showPlots, onShowPlots, dec, onPdf }: Props) {
   const [tab, setTab] = useState<"stats" | "trades" | "params">("stats");
+  const [pdfBusy, setPdfBusy] = useState(false);
   const s = result?.stats;
   const cls = (v: number) => (v >= 0 ? "text-bull" : "text-bear");
 
@@ -27,6 +29,22 @@ export function StrategyPanel({ header, params, onParams, result, showPlots, onS
       <div className="text-[11px] text-muted-foreground">
         Kapitał {header.initialCapital} USD · prowizja {header.commissionPct}% · tylko Long
       </div>
+      {result && onPdf && (
+        <button
+          className="tv-btn w-full"
+          disabled={pdfBusy}
+          onClick={async () => {
+            setPdfBusy(true);
+            try {
+              await onPdf();
+            } finally {
+              setPdfBusy(false);
+            }
+          }}
+        >
+          {pdfBusy ? "Generowanie PDF…" : "Pobierz raport PDF"}
+        </button>
+      )}
       <label className="flex items-center gap-2 text-xs">
         <input type="checkbox" className="tv-check" checked={showPlots} onChange={(e) => onShowPlots(e.target.checked)} />
         Pokaż linie strategii na wykresie
