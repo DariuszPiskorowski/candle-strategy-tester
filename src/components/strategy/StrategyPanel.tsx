@@ -29,7 +29,7 @@ export function StrategyPanel({ header, params, onParams, colors, onColors, resu
     <div className="space-y-2">
       <div className="text-xs font-semibold">{header.title}</div>
       <div className="text-[11px] text-muted-foreground">
-        Kapitał {header.initialCapital} USD · prowizja {header.commissionPct}% · tylko Long
+        Kapitał {header.initialCapital} USDC · prowizja {header.commissionPct}% · spot 100% · tylko Long
       </div>
       {result && onPdf && (
         <button
@@ -81,6 +81,7 @@ export function StrategyPanel({ header, params, onParams, colors, onColors, resu
               ["Największy zysk", `${fmt(s.largestWin)} USD`, 1],
               ["Największa strata", `${fmt(s.largestLoss)} USD`, -1],
               ["Maks. obsunięcie", `${fmt(s.maxDrawdown)} USD (${fmt(s.maxDrawdownPct)}%)`, -1],
+              ["DD — ostrożna granica OHLC", `${fmt(s.maxIntrabarDrawdownPct)}%`, -1],
               ["Prowizje", `${fmt(s.commission)} USD`],
               ["Śr. długość", `${fmt(s.avgBars, 1)} świec`],
               ["Wyjścia SELL / SL", `${s.signalExits} / ${s.stopExits}`],
@@ -189,3 +190,4 @@ export function StrategyPanel({ header, params, onParams, colors, onColors, resu
     </div>
   );
 }
+

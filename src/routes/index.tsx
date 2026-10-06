@@ -90,13 +90,17 @@ function Index() {
     const toISO = (t: number) => new Date(t * 1000).toISOString().slice(0, 10);
     return { min: toISO(raw[0].time), max: toISO(raw[raw.length - 1].time) };
   }, [raw]);
+  const calculationCandles = useMemo(
+    () => (tf && tf > baseInterval ? aggregate(raw, tf) : raw),
+    [raw, tf, baseInterval],
+  );
   const candles = useMemo(() => {
-    const base = tf && tf > baseInterval ? aggregate(raw, tf) : raw;
+    const base = calculationCandles;
     if (!fromDate && !toDate) return base;
     const from = fromDate ? Date.parse(`${fromDate}T00:00:00Z`) / 1000 : -Infinity;
     const to = toDate ? Date.parse(`${toDate}T23:59:59Z`) / 1000 : Infinity;
     return base.filter((c) => c.time >= from && c.time <= to);
-  }, [raw, tf, baseInterval, fromDate, toDate]);
+  }, [calculationCandles, fromDate, toDate]);
 
   async function loadStrategy(files: File[]) {
     const f = files[0];
@@ -114,8 +118,13 @@ function Index() {
   const header = useMemo(() => (strategy ? parsePineHeader(strategy.code) : null), [strategy]);
   const result = useMemo(() => {
     if (!strategy || !supported || !header || candles.length < 50) return null;
-    return runJarvis(candles, Object.fromEntries(params.map((p) => [p.name, p.value])), header, strategyColors);
-  }, [strategy, supported, header, candles, params, strategyColors]);
+    const startTime = fromDate ? Date.parse(`${fromDate}T00:00:00Z`) / 1000 : undefined;
+    const endTime = toDate ? Date.parse(`${toDate}T23:59:59Z`) / 1000 : undefined;
+    const tested = runJarvis(calculationCandles, Object.fromEntries(params.map((p) => [p.name, p.value])), header, strategyColors, { startTime, endTime });
+    const from = candles[0].time;
+    const to = candles[candles.length - 1].time;
+    return { ...tested, plots: tested.plots.map((plot) => ({ ...plot, data: plot.data.filter((point) => point.time >= from && point.time <= to) })) };
+  }, [strategy, supported, header, candles, calculationCandles, fromDate, toDate, params, strategyColors]);
 
 
   async function loadFiles(files: File[], merge: boolean) {
@@ -534,4 +543,5 @@ function Index() {
     </div>
   );
 }
+
 
