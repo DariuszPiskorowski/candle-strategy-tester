@@ -13,3 +13,4 @@
 - Candle parsing/indicators/backtest live in src/lib (candles.ts, indicators.ts, backtest.ts); the chart renders client-only via dynamic `lightweight-charts` import in src/components/chart, because the library touches the DOM and cannot run during SSR.
 - tsconfig: noUncheckedIndexedAccess and noPropertyAccessFromIndexSignature are off — the candle/indicator math uses a lot of array indexing and dynamic keys, and those checks only added noise.
 - Strategy plot colors are parsed and stored separately from Pine calculation inputs, because visual changes must not alter backtest results.
+- The interface theme is controlled at the document root and passed explicitly to the client-only chart, because its canvas colors do not inherit CSS tokens.

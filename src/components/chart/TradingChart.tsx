@@ -18,10 +18,11 @@ type Props = {
   chartType: "candles" | "bars" | "line" | "area";
   strategy?: StrategyResult | null;
   showPlots?: boolean;
+  theme?: "light" | "dark";
   onHover?: (c: Candle | null) => void;
 };
 
-export function TradingChart({ candles, indicators, chartType, strategy, showPlots = true, onHover }: Props) {
+export function TradingChart({ candles, indicators, chartType, strategy, showPlots = true, theme = "dark", onHover }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hoverRef = useRef(onHover);
   hoverRef.current = onHover;
@@ -36,27 +37,31 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
       const lc = await import("lightweight-charts");
       if (disposed || !containerRef.current) return;
 
-      const grid = { color: "rgba(255,255,255,0.06)" };
+      const isDark = theme === "dark";
+      const grid = { color: isDark ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.08)" };
+      const axis = isDark ? "rgba(255,255,255,0.12)" : "rgba(15,23,42,0.16)";
+      const crosshair = isDark ? "#758696" : "#64748b";
+      const crosshairLabel = isDark ? "#2a2e39" : "#475569";
       const chart = lc.createChart(el, {
         layout: {
           background: { color: "transparent" },
-          textColor: "#b2b5be",
+          textColor: isDark ? "#b2b5be" : "#475569",
           fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
           attributionLogo: false,
-          panes: { separatorColor: "rgba(255,255,255,0.12)" },
+          panes: { separatorColor: axis },
         },
         grid: { vertLines: grid, horzLines: grid },
-        rightPriceScale: { borderColor: "rgba(255,255,255,0.12)" },
+        rightPriceScale: { borderColor: axis },
         timeScale: {
-          borderColor: "rgba(255,255,255,0.12)",
+          borderColor: axis,
           timeVisible: true,
           secondsVisible: false,
           rightOffset: 6,
         },
         crosshair: {
           mode: lc.CrosshairMode.Normal,
-          vertLine: { color: "#758696", labelBackgroundColor: "#2a2e39" },
-          horzLine: { color: "#758696", labelBackgroundColor: "#2a2e39" },
+          vertLine: { color: crosshair, labelBackgroundColor: crosshairLabel },
+          horzLine: { color: crosshair, labelBackgroundColor: crosshairLabel },
         },
         localization: { locale: "pl-PL" },
         autoSize: true,
@@ -129,7 +134,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
       if (indicators.bb.on) {
         const bands = bollinger(candles, indicators.bb.length, indicators.bb.mult);
         addLine(bands.upper, "rgba(41,98,255,0.9)", 0, 1);
-        addLine(bands.middle, "rgba(255,255,255,0.45)", 0, 1);
+        addLine(bands.middle, isDark ? "rgba(255,255,255,0.45)" : "rgba(15,23,42,0.45)", 0, 1);
         addLine(bands.lower, "rgba(41,98,255,0.9)", 0, 1);
       }
 
@@ -211,7 +216,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
       disposed = true;
       cleanup();
     };
-  }, [candles, indicators, chartType, strategy, showPlots]);
+  }, [candles, indicators, chartType, strategy, showPlots, theme]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 }
