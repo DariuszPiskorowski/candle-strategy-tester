@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ClientOnly } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Moon, Sun } from "lucide-react";
 import { TradingChart, type IndicatorSettings } from "@/components/chart/TradingChart";
 import { StrategyPanel } from "@/components/strategy/StrategyPanel";
 import {
@@ -29,6 +30,8 @@ export const Route = createFileRoute("/")({
         content:
           "Własny terminal wykresowy: świece, wolumen, MA, Bollinger, RSI, MACD i tester strategii na Twoich danych.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Index,
@@ -44,6 +47,7 @@ const DEFAULTS: IndicatorSettings = {
 };
 
 function Index() {
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [raw, setRaw] = useState<Candle[]>([]);
   const [fileName, setFileName] = useState("poczatek.customization_6");
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +64,18 @@ function Index() {
   const inputRef = useRef<HTMLInputElement>(null);
   const stratInputRef = useRef<HTMLInputElement>(null);
   const indMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("candlelab-theme");
+    if (saved === "light" || saved === "dark") setTheme(saved);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    document.documentElement.classList.toggle("light", theme === "light");
+    document.documentElement.style.colorScheme = theme;
+    window.localStorage.setItem("candlelab-theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     if (!indMenuOpen) return;
@@ -120,7 +136,16 @@ function Index() {
     if (!strategy || !supported || !header || candles.length < 50) return null;
     const startTime = fromDate ? Date.parse(`${fromDate}T00:00:00Z`) / 1000 : undefined;
     const endTime = toDate ? Date.parse(`${toDate}T23:59:59Z`) / 1000 : undefined;
-    const tested = runJarvis(calculationCandles, Object.fromEntries(params.map((p) => [p.name, p.value])), header, strategyColors, { startTime, endTime });
+    const tested = runJarvis(
+      calculationCandles,
+      Object.fromEntries(params.map((p) => [p.name, p.value])),
+      header,
+      strategyColors,
+      {
+        ...(startTime !== undefined ? { startTime } : {}),
+        ...(endTime !== undefined ? { endTime } : {}),
+      },
+    );
     const from = candles[0].time;
     const to = candles[candles.length - 1].time;
     return { ...tested, plots: tested.plots.map((plot) => ({ ...plot, data: plot.data.filter((point) => point.time >= from && point.time <= to) })) };
@@ -221,7 +246,7 @@ function Index() {
           <span>Zakres:</span>
           <input
             type="date"
-            className="tv-btn px-1.5 py-0.5 font-mono text-xs [color-scheme:dark]"
+            className="tv-btn px-1.5 py-0.5 font-mono text-xs"
             value={fromDate}
             min={dateBounds.min}
             max={toDate || dateBounds.max}
@@ -230,7 +255,7 @@ function Index() {
           <span>–</span>
           <input
             type="date"
-            className="tv-btn px-1.5 py-0.5 font-mono text-xs [color-scheme:dark]"
+            className="tv-btn px-1.5 py-0.5 font-mono text-xs"
             value={toDate}
             min={fromDate || dateBounds.min}
             max={dateBounds.max}
@@ -408,6 +433,14 @@ function Index() {
             </button>
           ))}
         </div>
+        <button
+          className="tv-btn ml-auto grid size-7 shrink-0 place-items-center p-0"
+          title={theme === "dark" ? "Włącz jasny motyw" : "Włącz ciemny motyw"}
+          aria-label={theme === "dark" ? "Włącz jasny motyw" : "Włącz ciemny motyw"}
+          onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+        >
+          {theme === "dark" ? <Sun aria-hidden="true" className="size-4" /> : <Moon aria-hidden="true" className="size-4" />}
+        </button>
       </header>
 
       <div className="flex min-h-0 flex-1">
@@ -454,6 +487,7 @@ function Index() {
               onHover={setHover}
               strategy={result}
               showPlots={showPlots}
+              theme={theme}
             />
           </ClientOnly>
         </main>
