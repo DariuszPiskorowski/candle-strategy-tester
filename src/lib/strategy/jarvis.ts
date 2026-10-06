@@ -206,6 +206,8 @@ export type StrategyResult = {
     largestLoss: number;
     maxDrawdown: number;
     maxDrawdownPct: number;
+    // Conservative OHLC upper bound: high before low; actual intrabar order is unknown.
+    maxIntrabarDrawdownPct: number;
     commission: number;
     buyHoldPct: number;
     avgBars: number;
@@ -214,12 +216,20 @@ export type StrategyResult = {
   };
 };
 
+export type BacktestOptions = {
+  // Earlier candles warm up indicators but cannot open positions.
+  startTime?: number;
+  endTime?: number;
+};
+
 export function runJarvis(
   candles: Candle[],
   p: Record<string, number | string | boolean>,
   header: PineHeader,
   colorSettings: StrategyColor[] = DEFAULT_STRATEGY_COLORS,
+  options: BacktestOptions = {},
 ): StrategyResult {
+  candles = candles.filter((c) => options.endTime === undefined || c.time <= options.endTime);
   const n = candles.length;
   const num = (k: string, d: number) => (typeof p[k] === "number" ? (p[k] as number) : d);
   const bool = (k: string, d: boolean) => (typeof p[k] === "boolean" ? (p[k] as boolean) : d);
@@ -229,10 +239,6 @@ export function runJarvis(
   const sMaxBody = num("sidewaysMaxAvgBodyPct", 1) / 100;
   const period = num("period", 5);
   const res = String(p.res ?? "D");
-  const riskPerTrade = num("riskPerTrade", 1) / 100;
-  const maxSingle = num("maxSinglePosition", 30) / 100;
-  const maxExposure = num("maxMarketExposure", 60) / 100;
-  const minReserve = num("minimumReserve", 40) / 100;
   const swingLookback = num("swingLookback", 5);
   const swingBuffer = num("swingBuffer", 0.35) / 100;
   const convP = num("conversionPeriod", 8);
@@ -301,13 +307,19 @@ export function runJarvis(
   let cash = header.initialCapital;
   let pos: { qty: number; entryPrice: number; entryIdx: number; stop: number; notional: number; comm: number } | null =
     null;
+  let intrabarPeak = header.initialCapital;
+  let maxIntrabarDrawdownPct = 0;
+  const markIntrabar = (value: number) => {
+    intrabarPeak = Math.max(intrabarPeak, value);
+    if (intrabarPeak > 0) maxIntrabarDrawdownPct = Math.max(maxIntrabarDrawdownPct, ((intrabarPeak - value) / intrabarPeak) * 100);
+  };
   let stopArmed = false; // strategy.exit is placed at bar close and becomes active from the next bar
 
   const closePos = (i: number, px: number, reason: Trade["exitReason"]) => {
     if (!pos) return;
     const exitComm = pos.qty * px * comm;
     const pnl = pos.qty * (px - pos.entryPrice) - pos.comm - exitComm;
-    cash += pos.qty * (px - pos.entryPrice) - exitComm;
+    cash += pos.qty * px - exitComm;
     trades.push({
       entryTime: time[pos.entryIdx],
       entryPrice: pos.entryPrice,
@@ -328,6 +340,13 @@ export function runJarvis(
 
   for (let i = 0; i < n; i++) {
     const c = candles[i];
+    if (options.startTime !== undefined && c.time < options.startTime) continue;
+    if (pos) {
+      // Conservative bound, not a reconstruction of the true high/low sequence.
+      markIntrabar(cash + pos.qty * c.high);
+      const worstPrice = stopArmed && c.low <= pos.stop ? Math.min(c.open, pos.stop) : c.low;
+      markIntrabar(cash + pos.qty * worstPrice);
+    }
     // 1) intrabar stop from order placed on previous bar
     if (pos && stopArmed && c.low <= pos.stop) {
       closePos(i, Math.min(c.open, pos.stop), "STOP_LOSS");
@@ -359,25 +378,25 @@ export function runJarvis(
       if (sellC) closePos(i, close[i], "Strategy SELL");
       else stopArmed = true;
     } else if (longC) {
-      const eq = cash;
       const entry = close[i];
       const cs = candStop[i];
-      const dist = entry - cs;
-      const frac = dist > 0 ? dist / entry : NaN;
-      const riskNotional = Number.isFinite(frac) && frac > 0 ? (eq * riskPerTrade) / frac : 0;
-      const finalNotional = Math.min(riskNotional, eq * maxSingle, eq * maxExposure, eq * (1 - minReserve));
+      // Use all available spot cash, including the BUY commission.
+      // Stop distance affects the stop, never the quantity.
+      const finalNotional = Math.max(cash, 0) / (1 + comm);
       const qty = entry > 0 ? finalNotional / entry : 0;
       if (cs > 0 && cs < entry && finalNotional > 0 && qty > 0) {
         const entryComm = finalNotional * comm;
-        cash -= entryComm;
+        cash -= finalNotional + entryComm;
+        if (Math.abs(cash) < 1e-10) cash = 0;
         pos = { qty, entryPrice: entry, entryIdx: i, stop: cs, notional: finalNotional, comm: entryComm };
         stopArmed = false;
       }
     }
 
     stopPlot.push(pos ? { time: time[i], value: pos.stop } : ({ time: time[i] } as { time: number; value: number }));
-    const openPnl = pos ? pos.qty * (close[i] - pos.entryPrice) : 0;
-    equity.push({ time: time[i], value: cash + openPnl });
+    const accountEquity = cash + (pos ? pos.qty * close[i] : 0);
+    markIntrabar(accountEquity);
+    equity.push({ time: time[i], value: accountEquity });
   }
 
   if (pos) {
@@ -437,6 +456,7 @@ export function runJarvis(
     if (dd > mdd) mdd = dd;
     if (peak > 0) mddPct = Math.max(mddPct, (dd / peak) * 100);
   }
+  const firstTradingCandle = candles.find((c) => options.startTime === undefined || c.time >= options.startTime);
   const finalEquity = equity.length ? equity[equity.length - 1].value : header.initialCapital;
   const netProfit = finalEquity - header.initialCapital;
 
@@ -463,11 +483,13 @@ export function runJarvis(
       largestLoss: losses.length ? Math.min(...losses.map((t) => t.pnl)) : 0,
       maxDrawdown: mdd,
       maxDrawdownPct: mddPct,
+      maxIntrabarDrawdownPct,
       commission: trades.reduce((a, t) => a + t.commission, 0),
-      buyHoldPct: n > 1 ? ((close[n - 1] - close[0]) / close[0]) * 100 : 0,
+      buyHoldPct: firstTradingCandle && n > 1 ? ((close[n - 1] - firstTradingCandle.close) / firstTradingCandle.close) * 100 : 0,
       avgBars: closed.length ? closed.reduce((a, t) => a + t.bars, 0) / closed.length : 0,
       stopExits: closed.filter((t) => t.exitReason === "STOP_LOSS").length,
       signalExits: closed.filter((t) => t.exitReason === "Strategy SELL").length,
     },
   };
 }
+
