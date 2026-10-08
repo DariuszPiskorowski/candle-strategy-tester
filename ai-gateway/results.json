@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-08T18:43:13.081Z",
+  "generatedAt": "2026-10-08T18:43:19.377Z",
   "config": {
     "_info": "Plik sterujacy dla zewnetrznego AI. Sciezki wzgledne licza sie od tego folderu. Daty w UTC (RRRR-MM-DD). Swiece sprzed testStart sluza tylko do rozgrzewki wskaznikow.",
     "mode": "evaluate",
