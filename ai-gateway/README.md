@@ -11,7 +11,9 @@ Pola `config.json`:
 - `validationStart`: opcjonalnie; od tej daty do `testEnd` jest okres sprawdzenia, którego tuning nie widzi.
 - `params`: nadpisania wartości z pliku Pine (nazwy jak zmienne w Pine).
 - `objective.maxDrawdownPct`: limit obsunięcia.
-- `tune.parameters`: lista `{name, step, min, max}` do przeszukania.
+- `tune.parameters`: lista do przeszukania. Parametry liczbowe: `{name, step, min, max}`. Parametry włącz/wyłącz (bool): `{name, "bool": true}` — skrypt sprawdzi obie wartości.
+
+Dostępne parametry (nazwy jak w pliku Pine): `hmaLength`, `conversionPeriod`, `basePeriod`, `laggingSpanPeriod`, `displacement`, `macdFastLength`, `macdSlowLength`, `macdSignalLength`, `swingLookback`, `swingBuffer`, `useSidewaysFilter` (bool), `sidewaysLookback`, `sidewaysMaxRangePct`, `sidewaysMaxAvgBodyPct`. Wszystkie są już wpisane w `config.json` — wystarczy zmieniać zakresy/kroki albo usuwać pozycje z listy.
 
 `results.json`: `best.params`, `best.stats`, `changedParams`, `validation`, `months`, `trades`, `trials`.
-Parametry ryzyka (Risk per trade, Max position, exposure, reserve) i przesunięcie linii nie wpływają na wynik — nie tuninguj ich.
+Parametry ryzyka (Risk per trade, Max position, exposure, reserve) nie wpływają na wynik — nie tuninguj ich.

@@ -79,19 +79,27 @@ if (cfg.mode === 'tune') {
   converged = false;
   for (let pass = 1; pass <= (cfg.tune.maxPasses ?? 12); pass++) {
     let changed = false;
-    for (const { name, step, min, max } of list) {
+    for (const { name, step, min, max, bool } of list) {
       const anchor = best; let top = anchor;
-      for (const dir of [1, -1]) {
-        let prev = anchor, flats = 0;
-        for (let d = 1; d <= 100; d++) {
-          const v = Number((anchor.params[name] + dir * step * d).toFixed(8));
-          if (!allowed(anchor.params, name, v, min, max)) break;
+      if (bool) {
+        for (const v of [true, false]) {
+          if (v === anchor.params[name]) continue;
           const c = evaluate({ ...anchor.params, [name]: v }, { stage: 'tune', pass, parameter: name });
           if (compare(c, top) > 0) top = c;
-          const vs = compare(c, prev);
-          if (vs < 0) break;
-          if (vs === 0) { if (++flats >= 3) break; } else flats = 0;
-          prev = c;
+        }
+      } else {
+        for (const dir of [1, -1]) {
+          let prev = anchor, flats = 0;
+          for (let d = 1; d <= 100; d++) {
+            const v = Number((anchor.params[name] + dir * step * d).toFixed(8));
+            if (!allowed(anchor.params, name, v, min, max)) break;
+            const c = evaluate({ ...anchor.params, [name]: v }, { stage: 'tune', pass, parameter: name });
+            if (compare(c, top) > 0) top = c;
+            const vs = compare(c, prev);
+            if (vs < 0) break;
+            if (vs === 0) { if (++flats >= 3) break; } else flats = 0;
+            prev = c;
+          }
         }
       }
       if (compare(top, best) > 0) { changes.push({ pass, parameter: name, from: best.params[name], to: top.params[name] }); best = top; changed = true; }
