@@ -1,0 +1,27 @@
+{
+  "_info": "Plik sterujacy dla zewnetrznego AI. Sciezki wzgledne licza sie od tego folderu. Daty w UTC (RRRR-MM-DD). Swiece sprzed testStart sluza tylko do rozgrzewki wskaznikow.",
+  "mode": "evaluate",
+  "dataDir": "../data",
+  "strategyFile": "wersja_z_wejsciem_100_i_Filtrem_HA.txt",
+  "candleFiles": ["poczatek.customization_5.customization", "poczatek.customization_6.customization"],
+  "testStart": "2026-06-01",
+  "testEnd": "2026-09-30",
+  "validationStart": null,
+  "params": {},
+  "objective": { "maxDrawdownPct": 30 },
+  "tune": {
+    "maxTests": 600,
+    "maxPasses": 12,
+    "parameters": [
+      { "name": "sidewaysLookback", "step": 1, "min": 2, "max": 40 },
+      { "name": "sidewaysMaxRangePct", "step": 0.1, "min": 0.1, "max": 15 },
+      { "name": "sidewaysMaxAvgBodyPct", "step": 0.1, "min": 0.1, "max": 8 },
+      { "name": "conversionPeriod", "step": 1, "min": 1, "max": 40 },
+      { "name": "basePeriod", "step": 1, "min": 2, "max": 80 },
+      { "name": "laggingSpanPeriod", "step": 1, "min": 1, "max": 60 },
+      { "name": "swingLookback", "step": 1, "min": 1, "max": 60 },
+      { "name": "swingBuffer", "step": 0.05, "min": 0, "max": 3 }
+    ]
+  },
+  "resultsFile": "results.json"
+}

@@ -1,0 +1,209 @@
+//@version=5
+strategy("Ichimoku + Daily + HULL-MA + Hull-MACD + Jarvis RM + Sideways Filter", shorttitle="Jarvis Candidate SF", overlay=true, initial_capital=300, currency=currency.USD, pyramiding=0, max_bars_back=2999, commission_type=strategy.commission.percent, commission_value=0.25, slippage=1, process_orders_on_close=true)
+
+// =====================================================
+// MAIN INPUTS
+// =====================================================
+
+period = input.int(5, minval=1, title="Double HullMA X Period")
+res = input.timeframe("D", title="Higher Timeframe Resolution")
+price = input.source(close, title="Source of Price")
+
+// =====================================================
+// JARVIS RISK MANAGEMENT
+// =====================================================
+
+riskPerTrade = input.float(4.0, title="Risk per trade %", minval=0.1, step=0.25) / 100.0
+maxSinglePosition = input.float(100.0, title="Max single position %", minval=1.0, maxval=100.0, step=1.0) / 100.0
+maxMarketExposure = input.float(100.0, title="Max market exposure %", minval=1.0, maxval=100.0, step=1.0) / 100.0
+minimumReserve = input.float(0.0, title="Minimum USDC reserve %", minval=0.0, maxval=100.0, step=1.0) / 100.0
+
+swingLookback = input.int(5, minval=1, title="Swing Low Lookback")
+swingBuffer = input.float(0.35, title="Swing Low Buffer %", minval=0.0, step=0.05) / 100.0
+
+// =====================================================
+// SIDEWAYS FILTER
+// =====================================================
+
+useSidewaysFilter = input.bool(true, title="Enable Sideways Filter")
+
+sidewaysLookback = input.int(6, minval=2, title="Sideways Lookback")
+sidewaysMaxRangePct = input.float(3.0, minval=0.1, title="Sideways Max Range %", step=0.1) / 100.0
+sidewaysMaxAvgBodyPct = input.float(1.0, minval=0.1, title="Sideways Max Avg Body %", step=0.1) / 100.0
+
+rangeHigh = ta.highest(high, sidewaysLookback)
+rangeLow = ta.lowest(low, sidewaysLookback)
+rangePct = close > 0 ? (rangeHigh - rangeLow) / close : 0.0
+
+bodyPct = open > 0 ? math.abs(close - open) / open : 0.0
+avgBodyPct = ta.sma(bodyPct, sidewaysLookback)
+
+// Market is classified as sideways only when BOTH are true:
+// 1. total recent range is small
+// 2. average candle body is small
+
+sideways = rangePct < sidewaysMaxRangePct and avgBodyPct < sidewaysMaxAvgBodyPct
+
+// If filter is disabled, entry is always allowed.
+sidewaysEntryAllowed = not useSidewaysFilter or not sideways
+
+// =====================================================
+// HULL MA
+// =====================================================
+
+hma1 = ta.hma(price, period)
+hma2 = ta.hma(price[1], period)
+
+hmaColor = hma1 > hma2 ? color.green : color.red
+crossColor = hma1 > hma2 ? color.lime : color.red
+
+// =====================================================
+// CONFIRMED DAILY / HIGHER-TIMEFRAME DATA
+// =====================================================
+
+// Previous COMPLETED HTF candle vs candle before it.
+// This avoids using the unfinished current Daily candle.
+
+D1 = request.security(syminfo.tickerid, res, price[1], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+D2 = request.security(syminfo.tickerid, res, price[2], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+
+// =====================================================
+// ICHIMOKU
+// =====================================================
+
+conversionPeriod = input.int(8, minval=1, title="Conversion Line Period")
+basePeriod = input.int(25, minval=1, title="Base Line Period")
+laggingSpanPeriod = input.int(11, minval=1, title="Lagging Span 2 Period")
+displacement = input.int(9, minval=1, title="Displacement")
+
+donchian(len) =>
+    math.avg(ta.lowest(low, len), ta.highest(high, len))
+
+conversionLine = donchian(conversionPeriod)
+baseLine = donchian(basePeriod)
+leadLine1 = math.avg(conversionLine, baseLine)
+leadLine2 = donchian(laggingSpanPeriod)
+
+// =====================================================
+// HULL MACD
+// =====================================================
+
+macdLength = input.int(9, minval=1, title="Hull-MACD Signal Length")
+macdFastLength = input.int(13, minval=1, title="Hull-MACD Fast Length")
+macdSlowLength = input.int(27, minval=1, title="Hull-MACD Slow Length")
+
+macd = ta.hma(price, macdFastLength) - ta.hma(price, macdSlowLength)
+aMacd = ta.hma(macd, macdLength)
+
+// =====================================================
+// ORIGINAL STRATEGY CONDITIONS
+// =====================================================
+
+baseLongCondition = hma1 > hma2 and D1 > D2 and price > hma2 and leadLine1 > leadLine2 and macd > aMacd
+
+sellCondition = hma1 < hma2 and D1 < D2 and price < hma2 and leadLine1 < leadLine2 and macd < aMacd
+
+// Sideways filter applies ONLY to new entries.
+
+longCondition = baseLongCondition and sidewaysEntryAllowed
+
+// =====================================================
+// JARVIS SWING LOW STOP
+// =====================================================
+
+candidateStop = ta.lowest(low, swingLookback) * (1.0 - swingBuffer)
+
+entryReference = close
+stopDistance = entryReference - candidateStop
+stopDistanceFraction = stopDistance > 0 ? stopDistance / entryReference : na
+
+// =====================================================
+// POSITION SIZING
+// =====================================================
+
+// Risk budget:
+// 300 USDC × 4% = 12 USDC initially.
+
+riskBudget = strategy.equity * riskPerTrade
+
+// Desired position size based purely on stop distance.
+
+riskBasedNotional = not na(stopDistanceFraction) and stopDistanceFraction > 0 ? riskBudget / stopDistanceFraction : 0.0
+
+// Capital caps.
+
+maxSinglePositionCap = strategy.equity * maxSinglePosition
+marketExposureCap = strategy.equity * maxMarketExposure
+reserveCap = strategy.equity * (1.0 - minimumReserve)
+
+// Final position size.
+
+finalNotional = math.min(riskBasedNotional, math.min(maxSinglePositionCap, math.min(marketExposureCap, reserveCap)))
+
+// Convert USDC notional to coin quantity.
+
+orderQty = entryReference > 0 ? finalNotional / entryReference : 0.0
+
+// =====================================================
+// POSITION STATE
+// =====================================================
+
+var float activeStop = na
+var float entryNotional = na
+
+validRisk = candidateStop > 0 and candidateStop < entryReference and finalNotional > 0 and orderQty > 0
+
+// =====================================================
+// ENTRY
+// =====================================================
+
+if longCondition and strategy.position_size == 0 and validRisk
+    activeStop := candidateStop
+    entryNotional := finalNotional
+    strategy.entry("Long", strategy.long, qty=orderQty)
+
+// =====================================================
+// EXIT
+// =====================================================
+
+// Jarvis does NOT short.
+// sellCondition means:
+// sell ALT -> USDC.
+
+if strategy.position_size > 0
+    if sellCondition
+        strategy.close("Long", comment="Strategy SELL")
+    else
+        strategy.exit("Jarvis SL", from_entry="Long", stop=activeStop, comment="STOP_LOSS")
+
+// =====================================================
+// RESET AFTER POSITION CLOSE
+// =====================================================
+
+if strategy.position_size == 0 and strategy.position_size[1] > 0
+    activeStop := na
+    entryNotional := na
+
+// =====================================================
+// VISUALS
+// =====================================================
+
+plot(hma1, color=hmaColor, title="HMA 1")
+plot(hma2, color=hmaColor, title="HMA 2")
+
+plot(ta.cross(hma1, hma2) ? hma1 : na, style=plot.style_circles, color=crossColor, linewidth=4, title="HMA Cross")
+
+plot(conversionLine, color=#0496ff, title="Conversion Line")
+plot(baseLine, color=#991515, title="Base Line")
+
+plot(price, offset=-displacement, color=color.black, title="Lagging Span")
+
+p1 = plot(leadLine1, offset=displacement, color=color.green, title="Lead 1")
+p2 = plot(leadLine2, offset=displacement, color=color.red, title="Lead 2")
+
+fill(p1, p2, color=leadLine1 > leadLine2 ? color.new(color.green, 75) : color.new(color.red, 75))
+
+plot(strategy.position_size > 0 ? activeStop : na, color=color.orange, linewidth=2, title="Jarvis Stop Loss")
+
+// Light background only while sideways filter actively blocks entries.
+bgcolor(useSidewaysFilter and sideways ? color.new(color.gray, 88) : na, title="Sideways Market")
