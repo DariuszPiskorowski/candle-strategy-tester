@@ -1,0 +1,393 @@
+{
+  "generatedAt": "2026-10-08T18:43:13.081Z",
+  "config": {
+    "_info": "Plik sterujacy dla zewnetrznego AI. Sciezki wzgledne licza sie od tego folderu. Daty w UTC (RRRR-MM-DD). Swiece sprzed testStart sluza tylko do rozgrzewki wskaznikow.",
+    "mode": "evaluate",
+    "dataDir": "../data",
+    "strategyFile": "wersja_z_wejsciem_100_i_Filtrem_HA.txt",
+    "candleFiles": [
+      "poczatek.customization_5.customization",
+      "poczatek.customization_6.customization"
+    ],
+    "testStart": "2026-06-01",
+    "testEnd": "2026-09-30",
+    "validationStart": null,
+    "params": {},
+    "objective": {
+      "maxDrawdownPct": 30
+    },
+    "tune": {
+      "maxTests": 600,
+      "maxPasses": 12,
+      "parameters": [
+        {
+          "name": "sidewaysLookback",
+          "step": 1,
+          "min": 2,
+          "max": 40
+        },
+        {
+          "name": "sidewaysMaxRangePct",
+          "step": 0.1,
+          "min": 0.1,
+          "max": 15
+        },
+        {
+          "name": "sidewaysMaxAvgBodyPct",
+          "step": 0.1,
+          "min": 0.1,
+          "max": 8
+        },
+        {
+          "name": "conversionPeriod",
+          "step": 1,
+          "min": 1,
+          "max": 40
+        },
+        {
+          "name": "basePeriod",
+          "step": 1,
+          "min": 2,
+          "max": 80
+        },
+        {
+          "name": "laggingSpanPeriod",
+          "step": 1,
+          "min": 1,
+          "max": 60
+        },
+        {
+          "name": "swingLookback",
+          "step": 1,
+          "min": 1,
+          "max": 60
+        },
+        {
+          "name": "swingBuffer",
+          "step": 0.05,
+          "min": 0,
+          "max": 3
+        }
+      ]
+    },
+    "resultsFile": "results.json"
+  },
+  "header": {
+    "title": "Ichimoku + Daily + HULL-MA + Hull-MACD + Jarvis RM + Sideways Filter",
+    "initialCapital": 300,
+    "commissionPct": 0.25
+  },
+  "data": {
+    "candles": 1896,
+    "interval": 14400,
+    "warmupCandles": 1182,
+    "duplicates": 0,
+    "gaps": [],
+    "first": "2025-11-16T00:00:00.000Z",
+    "last": "2026-09-27T20:00:00.000Z"
+  },
+  "start": {
+    "initialCapital": 300,
+    "finalEquity": 528.8830676523314,
+    "netProfit": 228.88306765233142,
+    "netProfitPct": 76.29435588411047,
+    "grossProfit": 69.91836602282666,
+    "grossLoss": 64.82581306140372,
+    "profitFactor": 1.0785574869165038,
+    "totalTrades": 8,
+    "winners": 3,
+    "losers": 5,
+    "winRate": 37.5,
+    "avgTrade": 0.6365691201778683,
+    "avgWin": 23.306122007608888,
+    "avgLoss": -12.965162612280745,
+    "largestWin": 56.441026226237035,
+    "largestLoss": -18.053616666868912,
+    "maxDrawdown": 81.23112449635897,
+    "maxDrawdownPct": 21.06819287345881,
+    "maxIntrabarDrawdownPct": 25.06027721676874,
+    "commission": 12.741815858971863,
+    "buyHoldPct": 39.360872954014035,
+    "avgBars": 23,
+    "stopExits": 5,
+    "signalExits": 3,
+    "liquidationEquity": 527.5608599832005,
+    "liquidationProfitPct": 75.85361999440019,
+    "conservativeDDPct": 25.06027721676874,
+    "expectancyPct": 0.5113325666461077,
+    "payoffRatio": 1.7975958115275061,
+    "openPosition": {
+      "entryTime": 1789603200,
+      "entryPrice": 0.7202,
+      "exitTime": 1790539200,
+      "exitPrice": 1.2516,
+      "qty": 422.5655701920194,
+      "notional": 304.33172365229234,
+      "stop": 0.67512875,
+      "exitReason": "Otwarta",
+      "pnl": 223.7905146909084,
+      "pnlPct": 73.53505970563734,
+      "commission": 0.7608293091307309,
+      "bars": 65
+    }
+  },
+  "best": {
+    "params": {
+      "period": 5,
+      "res": "D",
+      "price": "close",
+      "riskPerTrade": 4,
+      "maxSinglePosition": 100,
+      "maxMarketExposure": 100,
+      "minimumReserve": 0,
+      "swingLookback": 5,
+      "swingBuffer": 0.35,
+      "useSidewaysFilter": true,
+      "sidewaysLookback": 6,
+      "sidewaysMaxRangePct": 3,
+      "sidewaysMaxAvgBodyPct": 1,
+      "conversionPeriod": 8,
+      "basePeriod": 25,
+      "laggingSpanPeriod": 11,
+      "displacement": 9,
+      "macdLength": 9,
+      "macdFastLength": 13,
+      "macdSlowLength": 27
+    },
+    "stats": {
+      "initialCapital": 300,
+      "finalEquity": 528.8830676523314,
+      "netProfit": 228.88306765233142,
+      "netProfitPct": 76.29435588411047,
+      "grossProfit": 69.91836602282666,
+      "grossLoss": 64.82581306140372,
+      "profitFactor": 1.0785574869165038,
+      "totalTrades": 8,
+      "winners": 3,
+      "losers": 5,
+      "winRate": 37.5,
+      "avgTrade": 0.6365691201778683,
+      "avgWin": 23.306122007608888,
+      "avgLoss": -12.965162612280745,
+      "largestWin": 56.441026226237035,
+      "largestLoss": -18.053616666868912,
+      "maxDrawdown": 81.23112449635897,
+      "maxDrawdownPct": 21.06819287345881,
+      "maxIntrabarDrawdownPct": 25.06027721676874,
+      "commission": 12.741815858971863,
+      "buyHoldPct": 39.360872954014035,
+      "avgBars": 23,
+      "stopExits": 5,
+      "signalExits": 3,
+      "liquidationEquity": 527.5608599832005,
+      "liquidationProfitPct": 75.85361999440019,
+      "conservativeDDPct": 25.06027721676874,
+      "expectancyPct": 0.5113325666461077,
+      "payoffRatio": 1.7975958115275061,
+      "openPosition": {
+        "entryTime": 1789603200,
+        "entryPrice": 0.7202,
+        "exitTime": 1790539200,
+        "exitPrice": 1.2516,
+        "qty": 422.5655701920194,
+        "notional": 304.33172365229234,
+        "stop": 0.67512875,
+        "exitReason": "Otwarta",
+        "pnl": 223.7905146909084,
+        "pnlPct": 73.53505970563734,
+        "commission": 0.7608293091307309,
+        "bars": 65
+      }
+    }
+  },
+  "changedParams": {},
+  "validation": null,
+  "months": [
+    {
+      "month": "2026-06",
+      "profitPct": -8.083110644881607,
+      "ddPct": 11.229617345954123,
+      "trades": 1
+    },
+    {
+      "month": "2026-07",
+      "profitPct": -2.717794515193195,
+      "ddPct": 7.106138490564992,
+      "trades": 2
+    },
+    {
+      "month": "2026-08",
+      "profitPct": 9.500140407573255,
+      "ddPct": 21.572976678966686,
+      "trades": 3
+    },
+    {
+      "month": "2026-09",
+      "profitPct": 67.05742239673802,
+      "ddPct": 13.795654184003686,
+      "trades": 1
+    }
+  ],
+  "converged": true,
+  "uniqueTests": 1,
+  "changes": [],
+  "trades": [
+    {
+      "entryTime": 1780920000,
+      "entryPrice": 0.7628,
+      "exitTime": 1781121600,
+      "exitPrice": 0.7260499,
+      "qty": 392.30711893574926,
+      "notional": 299.25187032418955,
+      "stop": 0.7260499,
+      "exitReason": "STOP_LOSS",
+      "pnl": -15.877541888592626,
+      "pnlPct": -5.305745247771369,
+      "commission": 1.460216036991946,
+      "bars": 14
+    },
+    {
+      "entryTime": 1782518400,
+      "entryPrice": 0.7073,
+      "exitTime": 1783209600,
+      "exitPrice": 0.7417,
+      "qty": 400.6983222156786,
+      "notional": 283.4139233031495,
+      "stop": 0.66476515,
+      "exitReason": "Strategy SELL",
+      "pnl": 12.332492611993043,
+      "pnlPct": 4.351406758094159,
+      "commission": 1.4515296722262958,
+      "bars": 48
+    },
+    {
+      "entryTime": 1784332800,
+      "entryPrice": 0.7421,
+      "exitTime": 1784808000,
+      "exitPrice": 0.7487,
+      "qty": 398.4849232845665,
+      "notional": 295.71566156947677,
+      "stop": 0.7183768500000001,
+      "exitReason": "Strategy SELL",
+      "pnl": 1.1448471845965795,
+      "pnlPct": 0.3871445896779478,
+      "commission": 1.4851533090815792,
+      "bars": 33
+    },
+    {
+      "entryTime": 1785038400,
+      "entryPrice": 0.7199,
+      "exitTime": 1785153600,
+      "exitPrice": 0.7011374,
+      "qty": 412.35956907009745,
+      "notional": 296.85765377356313,
+      "stop": 0.7011374,
+      "exitReason": "STOP_LOSS",
+      "pnl": -9.201883575375824,
+      "pnlPct": -3.0997629531879376,
+      "commission": 1.464945924741229,
+      "bars": 8
+    },
+    {
+      "entryTime": 1786492800,
+      "entryPrice": 0.6926,
+      "exitTime": 1786910400,
+      "exitPrice": 0.6695483500000001,
+      "qty": 415.36055087896955,
+      "notional": 287.6787175387743,
+      "stop": 0.6695483500000001,
+      "exitReason": "STOP_LOSS",
+      "pnl": -10.989202765256342,
+      "pnlPct": -3.819956811290769,
+      "commission": 1.4144567225871987,
+      "bars": 29
+    },
+    {
+      "entryTime": 1787068800,
+      "entryPrice": 0.6554,
+      "exitTime": 1787443200,
+      "exitPrice": 0.7927,
+      "qty": 422.2107404168324,
+      "notional": 276.7169192691919,
+      "stop": 0.63287715,
+      "exitReason": "Strategy SELL",
+      "pnl": 56.441026226237035,
+      "pnlPct": 20.3966661580714,
+      "commission": 1.5285084329940375,
+      "bars": 26
+    },
+    {
+      "entryTime": 1787817600,
+      "entryPrice": 0.7631,
+      "exitTime": 1788120000,
+      "exitPrice": 0.725452,
+      "qty": 436.4004649542465,
+      "notional": 333.0171948065855,
+      "stop": 0.725452,
+      "exitReason": "STOP_LOSS",
+      "pnl": -18.053616666868912,
+      "pnlPct": -5.421226575809201,
+      "commission": 1.624011962271434,
+      "bars": 21
+    },
+    {
+      "entryTime": 1788220800,
+      "entryPrice": 0.7332,
+      "exitTime": 1788292800,
+      "exitPrice": 0.7118996000000001,
+      "qty": 429.63529681896335,
+      "notional": 315.0085996276639,
+      "stop": 0.7118996000000001,
+      "exitReason": "STOP_LOSS",
+      "pnl": -10.70356816531001,
+      "pnlPct": -3.3978653846153692,
+      "commission": 1.552164488947413,
+      "bars": 5
+    },
+    {
+      "entryTime": 1789603200,
+      "entryPrice": 0.7202,
+      "exitTime": 1790539200,
+      "exitPrice": 1.2516,
+      "qty": 422.5655701920194,
+      "notional": 304.33172365229234,
+      "stop": 0.67512875,
+      "exitReason": "Otwarta",
+      "pnl": 223.7905146909084,
+      "pnlPct": 73.53505970563734,
+      "commission": 0.7608293091307309,
+      "bars": 65
+    }
+  ],
+  "trials": [
+    {
+      "trial": 1,
+      "stage": "start",
+      "params": {
+        "period": 5,
+        "res": "D",
+        "price": "close",
+        "riskPerTrade": 4,
+        "maxSinglePosition": 100,
+        "maxMarketExposure": 100,
+        "minimumReserve": 0,
+        "swingLookback": 5,
+        "swingBuffer": 0.35,
+        "useSidewaysFilter": true,
+        "sidewaysLookback": 6,
+        "sidewaysMaxRangePct": 3,
+        "sidewaysMaxAvgBodyPct": 1,
+        "conversionPeriod": 8,
+        "basePeriod": 25,
+        "laggingSpanPeriod": 11,
+        "displacement": 9,
+        "macdLength": 9,
+        "macdFastLength": 13,
+        "macdSlowLength": 27
+      },
+      "liquidationProfitPct": 75.85361999440019,
+      "conservativeDDPct": 25.06027721676874,
+      "totalTrades": 8
+    }
+  ]
+}
