@@ -1,161 +1,125 @@
+// Uruchomienie: node --experimental-strip-types scripts/tune-sui.mjs [ai-gateway/config.json]
+// Wszystkie ustawienia czytane sa z pliku konfiguracyjnego; wyniki trafiaja do resultsFile obok niego.
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseCandles } from '../src/lib/candles.ts';
 import { parsePineInputs, parsePineHeader, runJarvis } from '../src/lib/strategy/jarvis.ts';
 
-const upload = process.argv[2];
-const output = process.argv[3];
-if (!upload || !output) throw new Error('Usage: node scripts/tune-sui.mjs UPLOAD_DIRECTORY OUTPUT_DIRECTORY');
-fs.mkdirSync(output, { recursive: true });
-const source = fs.readFileSync(path.join(upload, 'jarvis_sui_spot_100pct(1).txt'), 'utf8');
-const initial = Object.fromEntries(parsePineInputs(source).map(p => [p.name, p.value]));
+const configPath = path.resolve(process.argv[2] ?? 'ai-gateway/config.json');
+const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+const base = path.dirname(configPath);
+const dataDir = path.resolve(base, cfg.dataDir ?? '.');
+const day = (s, endOfDay) => Date.parse(`${s}T${endOfDay ? '23:59:59' : '00:00:00'}Z`) / 1000;
+
+const source = fs.readFileSync(path.join(dataDir, cfg.strategyFile), 'utf8');
 const header = parsePineHeader(source);
-const files = ['poczatek.customization_4(1).customization', 'poczatek.customization_5(1).customization', 'poczatek.customization_6(1).customization', 'do 29.06.26(2).customization'];
+const fileParams = Object.fromEntries(parsePineInputs(source).map(p => [p.name, p.value]));
+const unknown = Object.keys(cfg.params ?? {}).filter(k => !(k in fileParams));
+if (unknown.length) throw new Error('Nieznane parametry w config.params: ' + unknown.join(', '));
+const startParams = { ...fileParams, ...(cfg.params ?? {}) };
+
+// Merge files: later file overwrites the same timestamp (e.g. an unfinished last candle).
 const merged = new Map();
-const conflicts = [];
 let duplicates = 0;
-for (const file of files) {
-  for (const c of parseCandles(fs.readFileSync(path.join(upload, file), 'utf8'))) {
-    if (merged.has(c.time)) {
-      duplicates++;
-      if (JSON.stringify(merged.get(c.time)) !== JSON.stringify(c)) conflicts.push({time:c.time, previous:merged.get(c.time), selected:c, file});
-    }
-    // The later download overwrites the unfinished last candle of the older file.
-    merged.set(c.time, c);
-  }
+for (const f of cfg.candleFiles) for (const c of parseCandles(fs.readFileSync(path.join(dataDir, f), 'utf8'))) {
+  if (merged.has(c.time)) duplicates++;
+  merged.set(c.time, c);
 }
-const candles = [...merged.values()].sort((a,b) => a.time-b.time);
-for(let i=1;i<candles.length;i++) if(candles[i].time-candles[i-1].time!==14400) throw new Error('Missing or inconsistent 4H candle');
-const options = { startTime:Date.parse('2026-06-01T00:00:00Z')/1000, endTime:Date.parse('2026-09-30T23:59:59Z')/1000 };
-const parameterOrder = [
-  ['sidewaysLookback',1,2,40],
-  ['sidewaysMaxRangePct',1,0.1,15],
-  ['sidewaysMaxAvgBodyPct',1,0.1,8],
-  ['period',1,2,40],
-  ['conversionPeriod',1,1,40],
-  ['basePeriod',1,2,80],
-  ['laggingSpanPeriod',1,1,60],
-  ['macdLength',1,1,40],
-  ['macdFastLength',1,2,60],
-  ['macdSlowLength',1,3,100],
-  ['swingLookback',1,1,60],
-  ['swingBuffer',0.05,0,3],
-];
+const candles = [...merged.values()].sort((a, b) => a.time - b.time);
+const interval = candles[1].time - candles[0].time;
+const gaps = [];
+for (let i = 1; i < candles.length; i++) if (candles[i].time - candles[i - 1].time !== interval) gaps.push(candles[i].time);
+
+const testStart = day(cfg.testStart), testEnd = day(cfg.testEnd, true);
+const valStart = cfg.validationStart ? day(cfg.validationStart) : null;
+const fitWindow = { startTime: testStart, endTime: valStart ? valStart - 1 : testEnd };
+const valWindow = valStart ? { startTime: valStart, endTime: testEnd } : null;
+const warmupCandles = candles.filter(c => c.time < testStart).length;
+const maxDD = cfg.objective?.maxDrawdownPct ?? 30;
+
+function summarize(r) {
+  const open = r.trades.find(t => t.exitReason === 'Otwarta');
+  const exitFee = open ? open.qty * open.exitPrice * header.commissionPct / 100 : 0;
+  const liq = r.stats.finalEquity - exitFee;
+  const closed = r.trades.filter(t => t.exitReason !== 'Otwarta');
+  return { ...r.stats, liquidationEquity: liq, liquidationProfitPct: (liq / header.initialCapital - 1) * 100,
+    conservativeDDPct: Math.max(r.stats.maxDrawdownPct, r.stats.maxIntrabarDrawdownPct),
+    expectancyPct: closed.reduce((a, t) => a + t.pnlPct, 0) / (closed.length || 1),
+    payoffRatio: r.stats.avgLoss < 0 ? r.stats.avgWin / -r.stats.avgLoss : null, openPosition: open ?? null };
+}
+const run = (p, w) => runJarvis(candles, p, header, undefined, w);
 const cache = new Map();
 const trials = [];
-const changes = [];
-let calls = 0;
-function summarize(r) {
-  const open = r.trades.find(t=>t.exitReason==='Otwarta');
-  const estimatedExitFee = open ? open.qty*open.exitPrice*header.commissionPct/100 : 0;
-  const liquidationEquity = r.stats.finalEquity-estimatedExitFee;
-  return {...r.stats, liquidationEquity, liquidationProfitPct:(liquidationEquity/header.initialCapital-1)*100,
-    conservativeDDPct:Math.max(r.stats.maxDrawdownPct,r.stats.maxIntrabarDrawdownPct),
-    expectancyPct:r.trades.filter(t=>t.exitReason!=='Otwarta').reduce((a,t)=>a+t.pnlPct,0)/(r.stats.totalTrades||1),
-    payoffRatio:r.stats.avgLoss<0?r.stats.avgWin/-r.stats.avgLoss:null,
-    openPosition:open??null};
+function evaluate(p, meta = {}) {
+  const key = JSON.stringify(p);
+  if (!cache.has(key)) cache.set(key, { params: { ...p }, stats: summarize(run(p, fitWindow)) });
+  const r = cache.get(key);
+  trials.push({ trial: trials.length + 1, ...meta, params: r.params, liquidationProfitPct: r.stats.liquidationProfitPct, conservativeDDPct: r.stats.conservativeDDPct, totalTrades: r.stats.totalTrades });
+  return r;
 }
-function evaluate(p,meta={}) {
-  const key=JSON.stringify(p);
-  if(!cache.has(key)) {
-    const r=runJarvis(candles,p,header,undefined,options);
-    cache.set(key,{params:{...p},stats:summarize(r)});
-    calls++;
-  }
-  const result=cache.get(key);
-  trials.push({trial:trials.length+1,...meta,...result});
-  return result;
-}
-function compare(a,b) {
-  const x=a.stats,y=b.stats;
-  const eligible=s=>s.conservativeDDPct<=30+1e-9 && s.totalTrades>0;
-  if(eligible(x)!==eligible(y)) return eligible(x)?1:-1;
-  if(!eligible(x) && Math.abs(x.conservativeDDPct-y.conservativeDDPct)>1e-9) return y.conservativeDDPct-x.conservativeDDPct;
-  // Lexicographic priorities; no weighted artificial score.
-  for(const [key,sign] of [['liquidationProfitPct',1],['conservativeDDPct',-1],['profitFactor',1],['expectancyPct',1],['payoffRatio',1],['winRate',1]]) {
-    const xv=x[key]??0,yv=y[key]??0;
-    if(xv===yv) continue;
-    if(Math.abs(xv-yv)>1e-9) return sign*(xv-yv);
+function compare(a, b) {
+  const x = a.stats, y = b.stats, ok = s => s.conservativeDDPct <= maxDD + 1e-9 && s.totalTrades > 0;
+  if (ok(x) !== ok(y)) return ok(x) ? 1 : -1;
+  if (!ok(x) && Math.abs(x.conservativeDDPct - y.conservativeDDPct) > 1e-9) return y.conservativeDDPct - x.conservativeDDPct;
+  for (const [k, s] of [['liquidationProfitPct', 1], ['conservativeDDPct', -1], ['profitFactor', 1], ['expectancyPct', 1], ['payoffRatio', 1], ['winRate', 1]]) {
+    const d = (x[k] ?? 0) - (y[k] ?? 0);
+    if (Math.abs(d) > 1e-9) return s * d;
   }
   return 0;
 }
-function allowed(p,key,value,min,max) {
-  if(value<min-1e-9 || value>max+1e-9) return false;
-  const q={...p,[key]:value};
-  return q.macdFastLength<q.macdSlowLength;
-}
-const baseline=evaluate(initial,{stage:'baseline'});
-const documented=evaluate({...initial,sidewaysLookback:8,sidewaysMaxRangePct:6,sidewaysMaxAvgBodyPct:3,swingLookback:15},{stage:'documented_reference'});
-console.log('BASELINE',JSON.stringify(baseline.stats));
-console.log('DOCUMENTED',JSON.stringify(documented.stats));
-// Retain the best already tested starting point rather than discard a known better reference.
-let current=process.argv[4]==="baseline"?baseline:(compare(documented,baseline)>0?documented:baseline);
-const startingPoint=current===documented?"documented_reference":"baseline";
-let converged=false;
-for(let pass=1;pass<=12;pass++) {
-  let changed=false;
-  for(const [key,step,min,max] of parameterOrder) {
-    const anchor=current;
-    let best=anchor;
-    for(const direction of [1,-1]) {
-      let previous=anchor;
-      let flats=0;
-      for(let distance=1;distance<=100;distance++) {
-        const value=Number((anchor.params[key]+direction*step*distance).toFixed(8));
-        if(!allowed(anchor.params,key,value,min,max)) break;
-        const candidate=evaluate({...anchor.params,[key]:value},{stage:'tuning',pass,parameter:key,direction,distance});
-        if(compare(candidate,best)>0) best=candidate;
-        const versusPrevious=compare(candidate,previous);
-        if(versusPrevious<0) break;
-        if(versusPrevious===0) {if(++flats>=3) break;} else flats=0;
-        previous=candidate;
+const allowed = (p, k, v, min, max) => v >= min - 1e-9 && v <= max + 1e-9 &&
+  !(('macdFastLength' in p) && { ...p, [k]: v }.macdFastLength >= { ...p, [k]: v }.macdSlowLength);
+
+const start = evaluate(startParams, { stage: 'start' });
+let best = start, converged = true;
+const changes = [];
+if (cfg.mode === 'tune') {
+  const list = cfg.tune?.parameters ?? [];
+  for (const t of list) if (!(t.name in fileParams)) throw new Error('Nieznany parametr do tuningu: ' + t.name);
+  converged = false;
+  for (let pass = 1; pass <= (cfg.tune.maxPasses ?? 12); pass++) {
+    let changed = false;
+    for (const { name, step, min, max } of list) {
+      const anchor = best; let top = anchor;
+      for (const dir of [1, -1]) {
+        let prev = anchor, flats = 0;
+        for (let d = 1; d <= 100; d++) {
+          const v = Number((anchor.params[name] + dir * step * d).toFixed(8));
+          if (!allowed(anchor.params, name, v, min, max)) break;
+          const c = evaluate({ ...anchor.params, [name]: v }, { stage: 'tune', pass, parameter: name });
+          if (compare(c, top) > 0) top = c;
+          const vs = compare(c, prev);
+          if (vs < 0) break;
+          if (vs === 0) { if (++flats >= 3) break; } else flats = 0;
+          prev = c;
+        }
       }
+      if (compare(top, best) > 0) { changes.push({ pass, parameter: name, from: best.params[name], to: top.params[name] }); best = top; changed = true; }
     }
-    if(compare(best,current)>0) {
-      changes.push({pass,parameter:key,from:current.params[key],to:best.params[key],before:current.stats,after:best.stats});
-      current=best;
-      changed=true;
-      console.log('PROMOTE',pass,key,anchor.params[key],'->',best.params[key],best.stats.liquidationProfitPct.toFixed(4),'DD',best.stats.conservativeDDPct.toFixed(4));
-    }
-  }
-// Verify percentage thresholds at the 0.1 pp resolution exposed by the Pine inputs.
-for(const key of ['sidewaysMaxRangePct','sidewaysMaxAvgBodyPct']) {
-  const anchor=current;
-  let best=anchor;
-  for(let j=-10;j<=10;j++) {
-    const value=Number((anchor.params[key]+j*0.1).toFixed(8));
-    if(value<0.1) continue;
-    const candidate=evaluate({...anchor.params,[key]:value},{stage:'fine_threshold',pass,parameter:key});
-    if(compare(candidate,best)>0) best=candidate;
-  }
-  if(compare(best,current)>0) {
-    changes.push({pass,parameter:key,from:current.params[key],to:best.params[key],before:current.stats,after:best.stats});
-    current=best;
-    changed=true;
-    console.log("PROMOTE FINE",pass,key,anchor.params[key],"->",best.params[key]);
+    console.log('PASS', pass, 'testy', cache.size, 'zysk%', best.stats.liquidationProfitPct.toFixed(2), 'DD%', best.stats.conservativeDDPct.toFixed(2));
+    if (!changed) { converged = true; break; }
+    if (cache.size >= (cfg.tune.maxTests ?? 600)) break;
   }
 }
-  console.log('PASS',pass,'unique tests',calls,'PnL%',current.stats.liquidationProfitPct.toFixed(4));
-  if(!changed) {converged=true;break;}
-  if(calls>=600) break;
+
+const months = [];
+for (let t = testStart; t <= testEnd;) {
+  const d = new Date(t * 1000), next = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1) / 1000;
+  const s = summarize(run(best.params, { startTime: t, endTime: Math.min(next - 1, testEnd) }));
+  months.push({ month: d.toISOString().slice(0, 7), profitPct: s.liquidationProfitPct, ddPct: s.conservativeDDPct, trades: s.totalTrades });
+  t = next;
 }
-const neighbors=[];
-for(const [key,step,min,max] of parameterOrder) {
-  for(const direction of [-1,1]) {
-    const value=Number((current.params[key]+direction*step).toFixed(8));
-    if(allowed(current.params,key,value,min,max)) neighbors.push({parameter:key,value,...evaluate({...current.params,[key]:value},{stage:'neighbors',parameter:key})});
-  }
-}
-const months=[];
-for(let month=6;month<=9;month++) {
-  const start=Date.UTC(2026,month-1,1)/1000,end=Date.UTC(2026,month,1)/1000-1;
-  for(const [version,p] of [['baseline',initial],['tuned',current.params]]) {
-    months.push({month,version,...summarize(runJarvis(candles,p,header,undefined,{startTime:start,endTime:end}))});
-  }
-}
-const finalResult=runJarvis(candles,current.params,header,undefined,options);
-fs.writeFileSync(path.join(output,'results.json'),JSON.stringify({sourceCommit:'802b1dee9f0ddee166df191c2b34168ea388bb6e',header,options,parameterOrder,baseline,documented,best:current,startingPoint,converged,calls,trials,changes,neighbors,months,data:{count:candles.length,duplicates,conflicts,start:candles[0].time,end:candles.at(-1).time,testCount:candles.filter(c=>c.time>=options.startTime).length},trades:finalResult.trades,equity:finalResult.equity},null,2));
-fs.writeFileSync(path.join(output,'merged-candles.json'),JSON.stringify(candles));
-console.log('BEST',JSON.stringify(current.params));
-console.log('STATS',JSON.stringify(current.stats));
-console.log('Unique optimization tests:',calls,'converged:',converged);
+const final = run(best.params, fitWindow);
+const out = {
+  generatedAt: new Date().toISOString(), config: cfg, header,
+  data: { candles: candles.length, interval, warmupCandles, duplicates, gaps, first: new Date(candles[0].time * 1000).toISOString(), last: new Date(candles.at(-1).time * 1000).toISOString() },
+  start: start.stats, best: { params: best.params, stats: best.stats },
+  changedParams: Object.fromEntries(Object.entries(best.params).filter(([k, v]) => fileParams[k] !== v)),
+  validation: valWindow ? { start: summarize(run(startParams, valWindow)), best: summarize(run(best.params, valWindow)) } : null,
+  months, converged, uniqueTests: cache.size, changes, trades: final.trades, trials,
+};
+const resultsPath = path.resolve(base, cfg.resultsFile ?? 'results.json');
+fs.writeFileSync(resultsPath, JSON.stringify(out, null, 2));
+if (warmupCandles < 100) console.warn('UWAGA: tylko', warmupCandles, 'swiec rozgrzewki przed testStart');
+if (gaps.length) console.warn('UWAGA: luki w danych:', gaps.length);
+console.log('Zapisano', resultsPath, '| zysk%', best.stats.liquidationProfitPct.toFixed(2), '| DD%', best.stats.conservativeDDPct.toFixed(2), '| transakcje', best.stats.totalTrades);
