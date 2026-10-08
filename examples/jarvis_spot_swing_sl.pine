@@ -1,0 +1,208 @@
+//@version=5
+const float FEE_PCT = 0.25 // Simulation assumption, NOT a verified Binance account rate.
+const int SLIPPAGE_TICKS = 1
+
+strategy("Ichimoku + Daily + HULL-MA + Hull-MACD + Jarvis RM + Sideways Filter", shorttitle="Jarvis Swing SL", overlay=true, initial_capital=300, currency=currency.USD, pyramiding=0, max_bars_back=2999, commission_type=strategy.commission.percent, commission_value=FEE_PCT, slippage=SLIPPAGE_TICKS, process_orders_on_close=true, calc_on_every_tick=false, calc_on_order_fills=false, margin_long=100, margin_short=100)
+
+// =====================================================
+// MAIN INPUTS
+// =====================================================
+
+period = input.int(5, minval=1, title="Double HullMA X Period")
+res = input.timeframe("D", title="Higher Timeframe Resolution")
+price = input.source(close, title="Source of Price")
+
+// =====================================================
+// JARVIS RISK MANAGEMENT
+// =====================================================
+
+// Full available cash minus execution buffer, including BUY commission.
+// Keep Strategy Properties commission/slippage equal to the constants above.
+// Equal confirmation timeframe is permitted. Lower confirmation timeframes are rejected.
+// Quantity step is explicit for Pine v5 compatibility; configure it for the traded pair.
+// Pine cannot obtain live Binance account fees; HP integration must query them.
+executionBufferPct = input.float(1.0, title="Cash execution buffer %", minval=0.0, maxval=99.0, step=0.1) / 100.0
+initialStopBars = input.int(5, title="Initial SL lookback bars", minval=1, maxval=500)
+stopBufferPct = input.float(0.25, title="SL buffer %", minval=0.0, maxval=20.0, step=0.05) / 100.0
+swingLookback = input.int(15, title="Local low search window bars", minval=3, maxval=500)
+swingDelay = input.int(5, title="Closed bars after local low", minval=1, maxval=499)
+useNewestLow = input.bool(false, title="SL: newest local low (off = lowest)")
+
+if barstate.isfirst
+    if timeframe.in_seconds(res) < timeframe.in_seconds()
+        runtime.error("Higher Timeframe Resolution must not be lower than the chart timeframe.")
+    if swingDelay >= swingLookback
+        runtime.error("SL delay must be smaller than the local low search window.")
+
+// =====================================================
+// SIDEWAYS FILTER
+// =====================================================
+
+useSidewaysFilter = input.bool(true, title="Enable Sideways Filter")
+
+sidewaysLookback = input.int(6, minval=2, title="Sideways Lookback")
+sidewaysMaxRangePct = input.float(3.0, minval=0.1, title="Sideways Max Range %", step=0.1) / 100.0
+sidewaysMaxAvgBodyPct = input.float(1.0, minval=0.1, title="Sideways Max Avg Body %", step=0.1) / 100.0
+
+rangeHigh = ta.highest(high, sidewaysLookback)
+rangeLow = ta.lowest(low, sidewaysLookback)
+rangePct = close > 0 ? (rangeHigh - rangeLow) / close : 0.0
+
+bodyPct = open > 0 ? math.abs(close - open) / open : 0.0
+avgBodyPct = ta.sma(bodyPct, sidewaysLookback)
+
+// Market is classified as sideways only when BOTH are true:
+// 1. total recent range is small
+// 2. average candle body is small
+
+sideways = rangePct < sidewaysMaxRangePct and avgBodyPct < sidewaysMaxAvgBodyPct
+
+// If filter is disabled, entry is always allowed.
+sidewaysEntryAllowed = not useSidewaysFilter or not sideways
+
+// =====================================================
+// HULL MA
+// =====================================================
+
+hma1 = ta.hma(price, period)
+hma2 = ta.hma(price[1], period)
+
+hmaColor = hma1 > hma2 ? color.green : color.red
+crossColor = hma1 > hma2 ? color.lime : color.red
+
+// =====================================================
+// CONFIRMED DAILY / HIGHER-TIMEFRAME DATA
+// =====================================================
+
+// Previous COMPLETED HTF candle vs candle before it.
+// This avoids using the unfinished current Daily candle.
+
+D1 = request.security(syminfo.tickerid, res, price[1], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+D2 = request.security(syminfo.tickerid, res, price[2], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+
+// =====================================================
+// ICHIMOKU
+// =====================================================
+
+conversionPeriod = input.int(8, minval=1, title="Conversion Line Period")
+basePeriod = input.int(25, minval=1, title="Base Line Period")
+laggingSpanPeriod = input.int(11, minval=1, title="Lagging Span 2 Period")
+displacement = input.int(9, minval=1, title="Displacement")
+
+donchian(len) =>
+    math.avg(ta.lowest(low, len), ta.highest(high, len))
+
+conversionLine = donchian(conversionPeriod)
+baseLine = donchian(basePeriod)
+leadLine1 = math.avg(conversionLine, baseLine)
+leadLine2 = donchian(laggingSpanPeriod)
+
+// =====================================================
+// HULL MACD
+// =====================================================
+
+macdLength = input.int(9, minval=1, title="Hull-MACD Signal Length")
+macdFastLength = input.int(13, minval=1, title="Hull-MACD Fast Length")
+macdSlowLength = input.int(27, minval=1, title="Hull-MACD Slow Length")
+
+macd = ta.hma(price, macdFastLength) - ta.hma(price, macdSlowLength)
+aMacd = ta.hma(macd, macdLength)
+
+// =====================================================
+// ORIGINAL STRATEGY CONDITIONS
+// =====================================================
+
+baseLongCondition = hma1 > hma2 and D1 > D2 and price > hma2 and leadLine1 > leadLine2 and macd > aMacd
+
+sellCondition = hma1 < hma2 and D1 < D2 and price < hma2 and leadLine1 < leadLine2 and macd < aMacd
+
+// Sideways filter applies ONLY to new entries.
+
+longCondition = baseLongCondition and sidewaysEntryAllowed
+
+// =====================================================
+// SPOT CASH SIZING AND PROTECTIVE STOP
+// =====================================================
+
+// Default execution model: signal and market entry on the bar close.
+// That fill is modeled as close + SLIPPAGE_TICKS * syminfo.mintick.
+// Submit the protective exit in the SAME calculation as the entry.
+// No fill-triggered recalculation: avoids using entry-bar high as post-entry data.
+// INITIAL_SL_BEGIN
+// Evaluated every bar. The signal bar is closed when an entry is submitted.
+float initialLow = ta.lowest(low, initialStopBars)
+int initialLowBar = bar_index + ta.lowestbars(low, initialStopBars)
+// INITIAL_SL_END
+var float activeStop = na
+var int stopAnchorBar = na
+
+// Reset BEFORE possibly placing a new entry after an intrabar stop exit.
+if strategy.position_size == 0
+    activeStop := na
+    stopAnchorBar := na
+
+float expectedEntry = close + SLIPPAGE_TICKS * syminfo.mintick
+float spendable = math.max(strategy.equity, 0.0) * (1.0 - executionBufferPct)
+float notional = spendable / (1.0 + FEE_PCT / 100.0)
+float qtyStep = input.float(0.1, title="Quantity step (SUIUSDC: 0.1)", minval=0.00000001)
+float rawQty = expectedEntry > 0 ? notional / expectedEntry : 0.0
+float orderQty = qtyStep > 0 ? math.floor(rawQty / qtyStep) * qtyStep : 0.0
+
+if longCondition and strategy.position_size == 0 and orderQty > 0 and bar_index >= initialStopBars - 1
+    // Round DOWN: preserve the full buffer below the low.
+    activeStop := math.floor(initialLow * (1.0 - stopBufferPct) / syminfo.mintick) * syminfo.mintick
+    stopAnchorBar := initialLowBar
+    if activeStop > 0 and activeStop < close
+        strategy.entry("Long", strategy.long, qty=orderQty)
+        strategy.exit("Jarvis SL", from_entry="Long", stop=activeStop, comment="STOP_LOSS")
+
+if strategy.position_size > 0
+    // SWING_SL_BEGIN
+    // Window includes current closed bar: offsets 0 .. lookback-1.
+    // Only mature, strict 1-left/1-right pivots newer than the SL anchor qualify.
+    // Search newest first; ties in lowest mode also prefer the newest pivot.
+    float candidateLow = na
+    int candidateBar = na
+    for age = swingDelay to swingLookback - 1
+        int pivotBar = bar_index - age
+        bool localLow = low[age] < low[age + 1] and low[age] < low[age - 1]
+        if localLow and pivotBar > stopAnchorBar
+            if na(candidateLow) or (not useNewestLow and low[age] < candidateLow)
+                candidateLow := low[age]
+                candidateBar := pivotBar
+    if not na(candidateLow)
+        float proposedStop = math.floor(candidateLow * (1.0 - stopBufferPct) / syminfo.mintick) * syminfo.mintick
+        // Never loosen protection or submit a newly raised stop above market.
+        if proposedStop > activeStop and proposedStop < close
+            activeStop := proposedStop
+            stopAnchorBar := candidateBar
+    // SWING_SL_END
+
+    // OLD stop protects the forming bar; updates apply only after its close.
+    strategy.exit("Jarvis SL", from_entry="Long", stop=activeStop, comment="STOP_LOSS")
+    if sellCondition
+        strategy.close("Long", comment="Strategy SELL")
+
+// =====================================================
+// VISUALS
+// =====================================================
+
+plot(hma1, color=hmaColor, title="HMA 1")
+plot(hma2, color=hmaColor, title="HMA 2")
+
+plot(ta.cross(hma1, hma2) ? hma1 : na, style=plot.style_circles, color=crossColor, linewidth=4, title="HMA Cross")
+
+plot(conversionLine, color=#0496ff, title="Conversion Line")
+plot(baseLine, color=#991515, title="Base Line")
+
+plot(price, offset=-displacement, color=color.black, title="Lagging Span")
+
+p1 = plot(leadLine1, offset=displacement, color=color.green, title="Lead 1")
+p2 = plot(leadLine2, offset=displacement, color=color.red, title="Lead 2")
+
+fill(p1, p2, color=leadLine1 > leadLine2 ? color.new(color.green, 75) : color.new(color.red, 75))
+
+plot(activeStop, color=color.orange, linewidth=2, style=plot.style_linebr, title="Jarvis Stop Loss")
+
+// Light background only while sideways filter actively blocks entries.
+bgcolor(useSidewaysFilter and sideways ? color.new(color.gray, 88) : na, title="Sideways Market")
