@@ -15,7 +15,7 @@ type Props = {
 };
 
 const fmt = (v: number, d = 2) =>
-  Number.isFinite(v) ? v.toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d }) : "∞";
+  Number.isNaN(v) ? "—" : Number.isFinite(v) ? v.toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d }) : "∞";
 const dt = (t: number) =>
   new Date(t * 1000).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
 
@@ -29,7 +29,7 @@ export function StrategyPanel({ header, params, onParams, colors, onColors, resu
     <div className="space-y-2">
       <div className="text-xs font-semibold">{header.title}</div>
       <div className="text-[11px] text-muted-foreground">
-        Kapitał {header.initialCapital} USDC · prowizja {header.commissionPct}% · spot 100% · tylko Long
+        Kapitał {header.initialCapital} USDC · prowizja {header.commissionPct}% · zlecenia z kodu Pine
       </div>
       {result && onPdf && (
         <button
@@ -60,7 +60,7 @@ export function StrategyPanel({ header, params, onParams, colors, onColors, resu
         ))}
       </div>
 
-      {!result && <p className="text-[11px] text-muted-foreground">Za mało świec do symulacji (min. 50).</p>}
+      {!result && <p className="text-[11px] text-muted-foreground">Brak wyniku symulacji.</p>}
 
       {result && s && tab === "stats" && (
         <div className="space-y-1 font-mono text-[11px]">
@@ -84,7 +84,7 @@ export function StrategyPanel({ header, params, onParams, colors, onColors, resu
               ["DD — ostrożna granica OHLC", `${fmt(s.maxIntrabarDrawdownPct)}%`, -1],
               ["Prowizje", `${fmt(s.commission)} USD`],
               ["Śr. długość", `${fmt(s.avgBars, 1)} świec`],
-              ["Wyjścia SELL / SL", `${s.signalExits} / ${s.stopExits}`],
+              ["Inne wyjścia / SL", `${s.signalExits} / ${s.stopExits}`],
             ] as [string, string, number?][]
           ).map(([k, v, sign]) => (
             <div key={k} className="flex justify-between gap-2 border-b border-border/50 py-0.5">
@@ -115,7 +115,7 @@ export function StrategyPanel({ header, params, onParams, colors, onColors, resu
                 <span className={t.exitReason === "STOP_LOSS" ? "text-bear" : ""}>{t.exitReason}</span>
               </div>
               <div className="text-muted-foreground">
-                Wartość {fmt(t.notional)} USD · SL {t.stop.toFixed(dec)} · {t.bars} świec
+                Wartość {fmt(t.notional)} USD · SL {fmt(t.stop, dec)} · {t.bars} świec
               </div>
             </div>
           ))}

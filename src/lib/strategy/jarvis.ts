@@ -174,7 +174,7 @@ export type Trade = {
   qty: number;
   notional: number;
   stop: number;
-  exitReason: "Strategy SELL" | "STOP_LOSS" | "Otwarta";
+  exitReason: string;
   pnl: number;
   pnlPct: number;
   commission: number;

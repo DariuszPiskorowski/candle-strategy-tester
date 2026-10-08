@@ -98,7 +98,7 @@ export async function downloadStrategyPdf(opts: {
       t.exitPrice.toFixed(dec),
       t.exitReason,
       fmt(t.notional),
-      t.stop.toFixed(dec),
+      Number.isFinite(t.stop) ? t.stop.toFixed(dec) : "—",
       t.bars,
       fmt(t.pnl),
       fmt(t.pnlPct),

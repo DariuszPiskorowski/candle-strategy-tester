@@ -158,7 +158,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
       }
 
       if (strategy) {
-        if (showPlots) for (const pl of strategy.plots) if (pl.data.length) addLine(pl.data, pl.color, 0, pl.width);
+        if (showPlots) for (const pl of strategy.plots) if (pl.data.length) addLine(pl.data.map(p => Number.isFinite(p.value) ? p : ({ time: p.time } as typeof p)), pl.color, 0, pl.width);
         const markers = strategy.trades
           .flatMap((t) => [
             {

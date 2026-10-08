@@ -4,15 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import { TradingChart, type IndicatorSettings } from "@/components/chart/TradingChart";
 import { StrategyPanel } from "@/components/strategy/StrategyPanel";
-import {
-  isJarvisStrategy,
-  parsePineHeader,
-  parsePineInputs,
-  parseStrategyColors,
-  runJarvis,
-  type PineInput,
-  type StrategyColor,
-} from "@/lib/strategy/jarvis";
+import type { PineInput, StrategyColor } from "@/lib/strategy/jarvis";
+import type { PineRequest, PineResponse } from "@/lib/strategy/pine-runtime";
 import { aggregate, detectInterval, parseCandles, TIMEFRAMES, type Candle } from "@/lib/candles";
 
 export const Route = createFileRoute("/")({
@@ -123,34 +116,49 @@ function Index() {
     if (!f) return;
     const text = await f.text();
     setStrategy({ name: f.name, code: text });
-    setParams(parsePineInputs(text));
-    setStrategyColors(parseStrategyColors(text));
+    setOverrides({});
   }
 
-  const [params, setParams] = useState<PineInput[]>([]);
-  const [strategyColors, setStrategyColors] = useState<StrategyColor[]>([]);
+  const [overrides, setOverrides] = useState<Record<string, number | string | boolean>>({});
+  const [marketSymbol, setMarketSymbol] = useState("SUIUSDC");
+  const [tickSize, setTickSize] = useState(0.0001);
+  const [qtyStep, setQtyStep] = useState(0.1);
   const [showPlots, setShowPlots] = useState(true);
-  const supported = strategy ? isJarvisStrategy(strategy.code) : false;
-  const header = useMemo(() => (strategy ? parsePineHeader(strategy.code) : null), [strategy]);
-  const result = useMemo(() => {
-    if (!strategy || !supported || !header || candles.length < 50) return null;
-    const startTime = fromDate ? Date.parse(`${fromDate}T00:00:00Z`) / 1000 : undefined;
-    const endTime = toDate ? Date.parse(`${toDate}T23:59:59Z`) / 1000 : undefined;
-    const tested = runJarvis(
-      calculationCandles,
-      Object.fromEntries(params.map((p) => [p.name, p.value])),
-      header,
-      strategyColors,
-      {
-        ...(startTime !== undefined ? { startTime } : {}),
-        ...(endTime !== undefined ? { endTime } : {}),
-      },
-    );
-    const from = candles[0].time;
-    const to = candles[candles.length - 1].time;
-    return { ...tested, plots: tested.plots.map((plot) => ({ ...plot, data: plot.data.filter((point) => point.time >= from && point.time <= to) })) };
-  }, [strategy, supported, header, candles, calculationCandles, fromDate, toDate, params, strategyColors]);
-
+  const strategyColors: StrategyColor[] = [];
+  const request = useMemo<PineRequest | null>(() => strategy ? ({
+    code: strategy.code, candles: calculationCandles, interval: tf ?? baseInterval,
+    symbol: marketSymbol, tickSize, qtyStep, inputs: overrides,
+    startTime: fromDate ? Date.parse(`${fromDate}T00:00:00Z`)/1000 : undefined,
+    endTime: toDate ? Date.parse(`${toDate}T23:59:59Z`)/1000 : undefined,
+  }) : null, [strategy, calculationCandles, tf, baseInterval, marketSymbol, tickSize, qtyStep, overrides, fromDate, toDate]);
+  const [execution, setExecution] = useState<{request: PineRequest; value?: PineResponse; error?: string} | null>(null);
+  const current = execution?.request === request ? execution : null;
+  const header = current?.value?.header ?? null;
+  const result = current?.value?.result ?? null;
+  const params = current?.value?.params ?? [];
+  const setParams = (values: PineInput[]) => setOverrides(Object.fromEntries(values.map(p=>[p.title,p.value])));
+  useEffect(() => {
+    if (!request) return;
+    let worker: Worker;
+    try { worker = new Worker(new URL("../lib/strategy/pine.worker.ts", import.meta.url), {type:"module"}); }
+    catch (e) { setExecution({request,error:String(e)}); return; }
+    const timer = window.setTimeout(() => {
+      worker.terminate();
+      setExecution({request,error:"Przekroczono limit 30 sekund. Wynik odrzucony."});
+    }, 30000);
+    worker.onmessage = event => {
+      window.clearTimeout(timer);
+      setExecution({request,...event.data});
+      worker.terminate();
+    };
+    worker.onerror = event => {
+      window.clearTimeout(timer);
+      setExecution({request,error:event.message || "Błąd wykonania Pine."});
+      worker.terminate();
+    };
+    worker.postMessage(request);
+    return () => {window.clearTimeout(timer);worker.terminate();};
+  }, [request]);
 
   async function loadFiles(files: File[], merge: boolean) {
     try {
@@ -540,19 +548,23 @@ function Index() {
                 </button>
               </div>
             )}
-            {strategy && !supported && (
-              <p className="text-[11px] leading-relaxed text-bear">
-                Ten skrypt nie jest jeszcze obsługiwany przez symulator. Obsługiwana jest strategia
-                Ichimoku + HullMA + Hull MACD + Jarvis RM.
-              </p>
-            )}
-            {strategy && supported && header && (
+            <div className="space-y-1 text-[11px]">
+              <div>Parametry rynku dla wczytanych danych (ręczne)</div>
+              <label className="block">Symbol <input className="tv-btn w-28" value={marketSymbol} onChange={e=>setMarketSymbol(e.target.value)} /></label>
+              <label className="block">Krok ceny <input className="tv-btn w-28" type="number" step="any" value={tickSize} onChange={e=>setTickSize(Number(e.target.value))} /></label>
+              <label className="block">Krok ilości <input className="tv-btn w-28" type="number" step="any" value={qtyStep} onChange={e=>setQtyStep(Number(e.target.value))} /></label>
+            </div>
+            {!strategy && <p className="text-xs">Wczytaj strategię .pine lub .txt, aby uruchomić test.</p>}
+            {strategy && !current && <p role="status" className="text-xs">Wykonywanie kodu Pine…</p>}
+            {current?.error && <p role="alert" className="whitespace-pre-wrap text-xs text-bear">Błąd Pine: {current.error}</p>}
+            {current?.value?.warnings.map(w=><p key={w} className="text-[11px] text-muted-foreground">{w}</p>)}
+            {strategy && header && (
               <StrategyPanel
                 header={header}
                 params={params}
                 onParams={setParams}
                 colors={strategyColors}
-                onColors={setStrategyColors}
+                onColors={() => {}}
                 result={result}
                 showPlots={showPlots}
                 onShowPlots={setShowPlots}
