@@ -29,7 +29,7 @@ export function StrategyPanel({ header, params, onParams, colors, onColors, resu
     <div className="space-y-2">
       <div className="text-xs font-semibold">{header.title}</div>
       <div className="text-[11px] text-muted-foreground">
-        Kapitał {header.initialCapital} USDC · prowizja {header.commissionPct}% · spot 100% · tylko Long
+        Kapitał {header.initialCapital} USDC · prowizja {header.commissionPct}% · spot 100% · tylko BUY
       </div>
       {result && onPdf && (
         <button
@@ -101,7 +101,7 @@ export function StrategyPanel({ header, params, onParams, colors, onColors, resu
           {[...result.trades].reverse().map((t, i) => (
             <div key={t.entryTime} className="rounded border border-border bg-card p-1.5 font-mono text-[10.5px] leading-snug">
               <div className="flex justify-between">
-                <span>#{result.trades.length - i} Long</span>
+                <span>#{result.trades.length - i} BUY</span>
                 <span className={cls(t.pnl)}>
                   {t.pnl >= 0 ? "+" : ""}
                   {fmt(t.pnl)} USD ({fmt(t.pnlPct)}%)
