@@ -298,7 +298,15 @@ function Index() {
             <option key={p} value={p}>{p.replace("USDC", "/USDC")}</option>
           ))}
         </select>
-        <select className="tv-btn px-1.5 py-0.5 text-xs" value={bnInterval} onChange={(e) => setBnInterval(e.target.value)}>
+        <select
+          className="tv-btn px-1.5 py-0.5 text-xs"
+          value={bnInterval}
+          onChange={(e) => {
+            setBnInterval(e.target.value);
+            // zmiana interwału wymaga ponownego pobrania historii — wyłączam odświeżanie, żeby nie mieszać rozdzielczości
+            setLiveSrc(null);
+          }}
+        >
           {BINANCE_INTERVALS.map((i) => (
             <option key={i} value={i}>{i.toUpperCase()}</option>
           ))}
