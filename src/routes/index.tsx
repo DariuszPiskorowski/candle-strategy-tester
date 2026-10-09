@@ -11,7 +11,7 @@ import {
   type StrategyColor,
 } from "@/lib/strategy/jarvis";
 import { aggregate, detectInterval, parseCandles, TIMEFRAMES, type Candle } from "@/lib/candles";
-import { ACTIVE_STRATEGY_ID, detectEngine } from "@/strategies/registry";
+import { ACTIVE_STRATEGY_ID, ENGINES, detectEngine, getEngine } from "@/strategies/registry";
 import { STRATEGY_SOURCES } from "@/strategies/sources";
 import { BINANCE_INTERVALS, BINANCE_PAIRS, fetchHistory, fetchLatest } from "@/lib/binance";
 
@@ -60,6 +60,7 @@ function Index() {
     return code ? { name: `${ACTIVE_STRATEGY_ID} (ostatnie najlepsze)`, code } : null;
   });
   const [stratDragging, setStratDragging] = useState(false);
+  const [stratListOpen, setStratListOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [indMenuOpen, setIndMenuOpen] = useState(false);
   const [fromDate, setFromDate] = useState("");
@@ -134,6 +135,15 @@ function Index() {
     setStrategyColors(detectEngine(text)?.parseColors(text) ?? []);
   }
 
+  function selectStrategy(id: string) {
+    const code = STRATEGY_SOURCES[id];
+    if (!code) return;
+    setStrategy({ name: `${id} (ostatnie najlepsze)`, code });
+    setParams(parsePineInputs(code));
+    setStrategyColors(getEngine(id)?.parseColors(code) ?? []);
+    setStratListOpen(false);
+  }
+
   const [params, setParams] = useState<PineInput[]>(() => (strategy ? parsePineInputs(strategy.code) : []));
   const [strategyColors, setStrategyColors] = useState<StrategyColor[]>(() =>
     strategy ? (detectEngine(strategy.code)?.parseColors(strategy.code) ?? []) : [],
@@ -141,6 +151,8 @@ function Index() {
   const [showPlots, setShowPlots] = useState(true);
   const engine = useMemo(() => (strategy ? detectEngine(strategy.code) : undefined), [strategy]);
   const supported = !!engine;
+  const activeEngineId = strategy ? detectEngine(strategy.code)?.id ?? null : null;
+  const strategyList = ENGINES.filter((e) => STRATEGY_SOURCES[e.id]);
   const header = useMemo(() => (strategy ? parsePineHeader(strategy.code) : null), [strategy]);
   const result = useMemo(() => {
     if (!strategy || !engine || !header || candles.length < 50) return null;
@@ -604,7 +616,44 @@ function Index() {
         {/* Right panel */}
         <aside className="w-[340px] shrink-0 space-y-4 overflow-y-auto border-l border-border p-3">
           <section className="space-y-2">
-            <h2 className="tv-h">Strategia</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="tv-h">Strategia</h2>
+              <button
+                className={`tv-btn ml-auto px-1.5 py-0.5 text-[11px] ${stratListOpen ? "tv-tf-active" : ""}`}
+                onClick={() => setStratListOpen((v) => !v)}
+              >
+                Lista strategii {stratListOpen ? "▴" : "▾"}
+              </button>
+            </div>
+            {stratListOpen && (
+              <div className="space-y-0.5 rounded-md border border-border bg-card p-1.5">
+                {strategyList.length === 0 && (
+                  <p className="text-[11px] text-muted-foreground">Brak strategii w rejestrze.</p>
+                )}
+                {strategyList.map((e) => {
+                  const active = e.id === activeEngineId;
+                  return (
+                    <button
+                      key={e.id}
+                      className={`flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-xs ${
+                        active ? "bg-primary/10 font-semibold" : "hover:bg-secondary"
+                      }`}
+                      onClick={() => (active ? setStratListOpen(false) : selectStrategy(e.id))}
+                    >
+                      <span
+                        className={`grid size-3.5 shrink-0 place-items-center rounded-sm border ${
+                          active ? "border-primary bg-primary text-[9px] text-primary-foreground" : "border-border"
+                        }`}
+                        aria-hidden="true"
+                      >
+                        {active ? "✓" : ""}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate">{e.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <input
               ref={stratInputRef}
               type="file"
