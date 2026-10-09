@@ -14,6 +14,7 @@ import {
   type StrategyColor,
 } from "@/lib/strategy/jarvis";
 import { aggregate, detectInterval, parseCandles, TIMEFRAMES, type Candle } from "@/lib/candles";
+import { BINANCE_INTERVALS, BINANCE_PAIRS, fetchHistory, fetchLatest } from "@/lib/binance";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -61,6 +62,11 @@ function Index() {
   const [indMenuOpen, setIndMenuOpen] = useState(false);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [bnPair, setBnPair] = useState<string>("SUIUSDC");
+  const [bnInterval, setBnInterval] = useState<string>("4h");
+  const [bnLoading, setBnLoading] = useState(false);
+  const [liveSrc, setLiveSrc] = useState<{ pair: string; interval: string } | null>(null);
+  const [live, setLive] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
   const stratInputRef = useRef<HTMLInputElement>(null);
   const indMenuRef = useRef<HTMLDivElement>(null);
@@ -172,6 +178,7 @@ function Index() {
       const names = files.map((f) => f.name.replace(/\.customization$/i, "")).join(" + ");
       setFileName(merge && base.length ? `${fileName} + ${names}` : names);
       setTf(null);
+      setLiveSrc(null);
       setFromDate("");
       setToDate("");
       setError(null);
@@ -180,6 +187,49 @@ function Index() {
     }
   }
   const mergeRef = useRef<HTMLInputElement>(null);
+
+  async function loadBinance() {
+    setBnLoading(true);
+    try {
+      const list = await fetchHistory(bnPair, bnInterval, 6);
+      if (!list.length) throw new Error("Binance nie zwrócił świec.");
+      setRaw(list);
+      setFileName(`Binance ${bnPair} ${bnInterval}`);
+      setTf(null);
+      setFromDate("");
+      setToDate("");
+      setError(null);
+      setLiveSrc({ pair: bnPair, interval: bnInterval });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Nie udało się pobrać danych z Binance.");
+    } finally {
+      setBnLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!live || !liveSrc) return;
+    let stop = false;
+    const tick = async () => {
+      try {
+        const latest = await fetchLatest(liveSrc.pair, liveSrc.interval);
+        if (stop) return;
+        setRaw((prev) => {
+          const map = new Map(prev.map((c) => [c.time, c]));
+          for (const c of latest) map.set(c.time, c);
+          return [...map.values()].sort((a, b) => a.time - b.time);
+        });
+      } catch {
+        /* chwilowy błąd sieci — spróbuje ponownie */
+      }
+    };
+    void tick();
+    const id = window.setInterval(tick, 15000);
+    return () => {
+      stop = true;
+      window.clearInterval(id);
+    };
+  }, [live, liveSrc]);
 
   const last = hover ?? candles[candles.length - 1];
   const prev = last ? candles[candles.indexOf(last) - 1] : undefined;
@@ -237,6 +287,25 @@ function Index() {
             e.target.value = "";
           }}
         />
+        <div className="tv-divider" />
+        <select className="tv-btn px-1.5 py-0.5 text-xs" value={bnPair} onChange={(e) => setBnPair(e.target.value)}>
+          {BINANCE_PAIRS.map((p) => (
+            <option key={p} value={p}>{p.replace("USDC", "/USDC")}</option>
+          ))}
+        </select>
+        <select className="tv-btn px-1.5 py-0.5 text-xs" value={bnInterval} onChange={(e) => setBnInterval(e.target.value)}>
+          {BINANCE_INTERVALS.map((i) => (
+            <option key={i} value={i}>{i.toUpperCase()}</option>
+          ))}
+        </select>
+        <button className="tv-btn" disabled={bnLoading} onClick={() => void loadBinance()}>
+          {bnLoading ? "Pobieram…" : "Pobierz z Binance"}
+        </button>
+        <label className={`flex items-center gap-1 text-xs ${liveSrc ? "" : "opacity-50"}`} title="Dociąga nowe świece co 15 s">
+          <input type="checkbox" className="tv-check" disabled={!liveSrc} checked={live && !!liveSrc} onChange={(e) => setLive(e.target.checked)} />
+          Na żywo
+          {live && liveSrc && <span className="animate-pulse text-bull">●</span>}
+        </label>
         <span className="font-mono text-xs text-muted-foreground">
           {fileName} · {candles.length} świec
         </span>
