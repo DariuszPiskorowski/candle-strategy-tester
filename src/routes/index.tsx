@@ -241,6 +241,23 @@ function Index() {
   const changePct = last && prev ? ((last.close - prev.close) / prev.close) * 100 : 0;
   const dec = last && last.close < 10 ? 5 : 2;
 
+  // Odliczanie do zamknięcia ostatniej świecy — tyka co sekundę, dane odświeża „Na żywo" co 15 s
+  const candleSec = tf && tf > baseInterval ? tf : baseInterval;
+  const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
+  useEffect(() => {
+    const id = window.setInterval(() => setNowSec(Math.floor(Date.now() / 1000)), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  const lastCandle = candles[candles.length - 1];
+  const countdownSec = lastCandle ? lastCandle.time + candleSec - nowSec : null;
+  const showCountdown = countdownSec !== null && countdownSec >= -30;
+  const fmtCountdown = (s: number) => {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return [h, m, sec].map((v) => String(v).padStart(2, "0")).join(":");
+  };
+
   return (
     <div
       className="flex h-screen flex-col bg-background text-foreground"
