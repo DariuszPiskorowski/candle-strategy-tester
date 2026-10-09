@@ -568,6 +568,12 @@ function Index() {
               </span>
             </div>
           )}
+          {showCountdown && (
+            <div className="pointer-events-none absolute right-3 top-2 z-10 rounded border border-border bg-card/80 px-2 py-1 font-mono text-xs">
+              <span className="text-muted-foreground">Zamknięcie za </span>
+              <span className="text-foreground">{fmtCountdown(Math.max(0, countdownSec ?? 0))}</span>
+            </div>
+          )}
           {error && (
             <div className="absolute inset-x-0 top-10 z-20 mx-auto w-fit rounded-md border border-bear/40 bg-card px-3 py-1.5 text-xs text-bear">
               {error}
