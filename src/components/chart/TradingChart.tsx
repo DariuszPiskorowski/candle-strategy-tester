@@ -28,6 +28,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
   hoverRef.current = onHover;
   // zapamiętany widok (przybliżenie/przesunięcie) między przebudowami wykresu
   const viewRef = useRef<{ from: number; to: number } | null>(null);
+  const priceRangeRef = useRef<{ from: number; to: number } | null>(null);
   const prevCandlesRef = useRef<Candle[]>([]);
 
   useEffect(() => {
@@ -242,14 +243,23 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
       const saved = viewRef.current;
       if (sameSeries && saved) {
         chart.timeScale().setVisibleLogicalRange(saved);
+        const pr = priceRangeRef.current;
+        if (pr) {
+          const ps = chart.priceScale("right");
+          ps.setAutoScale(false);
+          ps.setVisibleRange(pr);
+        }
       } else {
         chart.timeScale().fitContent();
+        priceRangeRef.current = null;
       }
       prevCandlesRef.current = candles;
 
       cleanup = () => {
         const range = chart.timeScale().getVisibleLogicalRange();
         if (range) viewRef.current = { from: range.from, to: range.to };
+        const pr = chart.priceScale("right").getVisibleRange();
+        priceRangeRef.current = pr ? { from: pr.from, to: pr.to } : null;
         chart.remove();
       };
     })();
