@@ -228,17 +228,27 @@ function Index() {
     let stop = false;
     const tick = async () => {
       try {
-        const latest = await fetchLatest(liveSrc.pair, liveSrc.interval);
-        if (stop) return;
         setRaw((prev) => {
           if (!prev.length) return prev;
           const lastTime = prev[prev.length - 1].time;
-          // tylko aktualizacja bieżącej świecy i ewentualnie nowych — nigdy nie rusza historii ani interwału
-          const fresh = latest.filter((c) => c.time >= lastTime);
-          if (!fresh.length) return prev;
-          const map = new Map(prev.map((c) => [c.time, c]));
-          for (const c of fresh) map.set(c.time, c);
-          return [...map.values()].sort((a, b) => a.time - b.time);
+          void fetchLatest(liveSrc.pair, liveSrc.interval, lastTime * 1000)
+            .then((latest) => {
+              if (stop) return;
+              setRaw((cur) => {
+                if (!cur.length) return cur;
+                const curLast = cur[cur.length - 1].time;
+                // tylko aktualizacja bieżącej świecy i dobranie brakujących — nigdy nie rusza historii ani interwału
+                const fresh = latest.filter((c) => c.time >= curLast);
+                if (!fresh.length) return cur;
+                const map = new Map(cur.map((c) => [c.time, c]));
+                for (const c of fresh) map.set(c.time, c);
+                return [...map.values()].sort((a, b) => a.time - b.time);
+              });
+            })
+            .catch(() => {
+              /* chwilowy błąd sieci — spróbuje ponownie */
+            });
+          return prev;
         });
       } catch {
         /* chwilowy błąd sieci — spróbuje ponownie */

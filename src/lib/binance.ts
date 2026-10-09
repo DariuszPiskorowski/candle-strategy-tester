@@ -27,7 +27,7 @@ export async function fetchHistory(symbol: string, interval: string, months = 6)
   return parseCandles(JSON.stringify(rows));
 }
 
-/** Kilka najnowszych świec (ostatnia może być jeszcze otwarta). */
-export async function fetchLatest(symbol: string, interval: string): Promise<Candle[]> {
-  return parseCandles(JSON.stringify(await klines(symbol, interval, undefined, 3)));
+/** Najnowsze świece; z `fromMs` dobiera też wszystkie brakujące od tego czasu (ostatnia może być jeszcze otwarta). */
+export async function fetchLatest(symbol: string, interval: string, fromMs?: number): Promise<Candle[]> {
+  return parseCandles(JSON.stringify(await klines(symbol, interval, fromMs, fromMs ? 1000 : 3)));
 }
