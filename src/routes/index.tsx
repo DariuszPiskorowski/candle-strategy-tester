@@ -215,8 +215,13 @@ function Index() {
         const latest = await fetchLatest(liveSrc.pair, liveSrc.interval);
         if (stop) return;
         setRaw((prev) => {
+          if (!prev.length) return prev;
+          const lastTime = prev[prev.length - 1].time;
+          // tylko aktualizacja bieżącej świecy i ewentualnie nowych — nigdy nie rusza historii ani interwału
+          const fresh = latest.filter((c) => c.time >= lastTime);
+          if (!fresh.length) return prev;
           const map = new Map(prev.map((c) => [c.time, c]));
-          for (const c of latest) map.set(c.time, c);
+          for (const c of fresh) map.set(c.time, c);
           return [...map.values()].sort((a, b) => a.time - b.time);
         });
       } catch {
@@ -301,7 +306,7 @@ function Index() {
         <button className="tv-btn" disabled={bnLoading} onClick={() => void loadBinance()}>
           {bnLoading ? "Pobieram…" : "Pobierz z Binance"}
         </button>
-        <label className={`flex items-center gap-1 text-xs ${liveSrc ? "" : "opacity-50"}`} title="Dociąga nowe świece co 15 s">
+        <label className={`flex items-center gap-1 text-xs ${liveSrc ? "" : "opacity-50"}`} title="Aktualizuje cenę bieżącej świecy co 15 s (interwał zostaje bez zmian)">
           <input type="checkbox" className="tv-check" disabled={!liveSrc} checked={live && !!liveSrc} onChange={(e) => setLive(e.target.checked)} />
           Na żywo
           {live && liveSrc && <span className="animate-pulse text-bull">●</span>}
