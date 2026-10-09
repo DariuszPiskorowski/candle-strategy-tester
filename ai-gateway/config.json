@@ -1,5 +1,5 @@
 {
-  "_info": "Plik sterujacy dla zewnetrznego AI. Sciezki wzgledne licza sie od tego folderu. Daty w UTC (RRRR-MM-DD). Swiece sprzed testStart sluza tylko do rozgrzewki wskaznikow. testStart: null = 6 miesiecy wstecz od teraz. testEnd: null = teraz (biezaca data i godzina).",
+  "_info": "Plik sterujacy dla zewnetrznego AI. Sciezki wzgledne licza sie od tego folderu. Daty w UTC (RRRR-MM-DD). Swiece sprzed testStart sluza tylko do rozgrzewki wskaznikow (wgrywaj ~6 mies. danych). testStart: null = 4 miesiace wstecz od teraz. testEnd: null = teraz (biezaca data i godzina).",
   "mode": "evaluate",
   "dataDir": "../data",
   "strategyFile": "wersja_z_wejsciem_100_i_Filtrem_HA.txt",

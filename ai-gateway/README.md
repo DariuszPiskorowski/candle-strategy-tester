@@ -7,7 +7,7 @@
 Pola `config.json`:
 - `mode`: `evaluate` = przelicz podane ustawienia; `tune` = samodzielnie szukaj lepszych.
 - `dataDir`, `strategyFile`, `candleFiles`: pliki (świece wcześniejsze niż `testStart` służą tylko do rozgrzewki, np. 6 mies. danych na 4 mies. testu).
-- `testStart` / `testEnd`: okres handlu (RRRR-MM-DD, UTC). `testStart: null` = 6 miesięcy wstecz od teraz, `testEnd: null` = bieżąca data i godzina (domyślnie oba null — okres zawsze „ostatnie 6 miesięcy do teraz").
+- `testStart` / `testEnd`: okres handlu (RRRR-MM-DD, UTC). `testStart: null` = 4 miesiące wstecz od teraz, `testEnd: null` = bieżąca data i godzina (domyślnie oba null — strategia handluje przez ostatnie 4 miesiące, a wcześniejsze świece tylko rozgrzewają wskaźniki).
 - `validationStart`: opcjonalnie; od tej daty do `testEnd` jest okres sprawdzenia, którego tuning nie widzi.
 - `params`: nadpisania wartości z pliku Pine (nazwy jak zmienne w Pine).
 - `objective.maxDrawdownPct`: limit obsunięcia.
