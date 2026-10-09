@@ -629,7 +629,7 @@ function Index() {
               role="button"
               aria-label="Wgraj plik strategii"
             >
-              Przeciągnij plik strategii (Pine Script) tutaj lub kliknij, aby wybrać.
+              Przeciągnij plik strategii (.txt) tutaj lub kliknij, aby wybrać.
             </div>
             {strategy && (
               <div className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1.5 text-xs">

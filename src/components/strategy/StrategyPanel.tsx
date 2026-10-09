@@ -67,21 +67,17 @@ export function StrategyPanel({ header, params, onParams, colors, onColors, resu
           {(() => {
             const closed = result.trades.filter((t) => t.exitReason !== "Otwarta");
             let cur = 0;
-            let max = 0;
             for (const t of [...closed].sort((a, b) => (a.exitTime as number) - (b.exitTime as number))) {
-              if (t.pnl < 0) { cur++; max = Math.max(max, cur); } else cur = 0;
+              if (t.pnl < 0) { cur++; } else cur = 0;
             }
             const alert = cur >= 3;
             return (
               <div className={`mb-1 rounded border px-2 py-1 ${alert ? "border-bear text-bear" : "border-border"}`}>
                 <div className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">Straty z rzędu (teraz)</span>
-                  <span className={alert ? "text-bear font-bold" : cur > 0 ? "text-bear" : ""}>{cur} / 3</span>
+                  <span className="text-muted-foreground">Straty z rzędu</span>
+                  <span className={alert ? "text-bear font-bold" : cur > 0 ? "text-bear" : ""}>{cur}</span>
                 </div>
-                <div className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">Najdłuższa seria strat</span>
-                  <span>{max}</span>
-                </div>
+
                 {alert && <div className="pt-0.5 font-bold">Czas stroić parametry</div>}
               </div>
             );
