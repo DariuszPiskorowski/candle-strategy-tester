@@ -26,6 +26,9 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
   const containerRef = useRef<HTMLDivElement>(null);
   const hoverRef = useRef(onHover);
   hoverRef.current = onHover;
+  // zapamiętany widok (przybliżenie/przesunięcie) między przebudowami wykresu
+  const viewRef = useRef<{ from: number; to: number } | null>(null);
+  const prevCandlesRef = useRef<Candle[]>([]);
 
   useEffect(() => {
     const el = containerRef.current;
