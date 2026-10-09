@@ -60,6 +60,7 @@ function Index() {
     return code ? { name: `${ACTIVE_STRATEGY_ID} (ostatnie najlepsze)`, code } : null;
   });
   const [stratDragging, setStratDragging] = useState(false);
+  const [stratListOpen, setStratListOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [indMenuOpen, setIndMenuOpen] = useState(false);
   const [fromDate, setFromDate] = useState("");
