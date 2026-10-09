@@ -211,8 +211,27 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
         hoverRef.current?.(found ?? null);
       });
 
-      chart.timeScale().fitContent();
-      cleanup = () => chart.remove();
+      // Zachowaj widok użytkownika, jeśli to tylko aktualizacja danych (np. tick na żywo),
+      // a nie wczytanie zupełnie nowego zestawu świec.
+      const prev = prevCandlesRef.current;
+      const sameSeries =
+        prev.length > 0 &&
+        candles.length > 0 &&
+        prev[0].time === candles[0].time &&
+        Math.abs(candles.length - prev.length) <= 2;
+      const saved = viewRef.current;
+      if (sameSeries && saved) {
+        chart.timeScale().setVisibleLogicalRange(saved);
+      } else {
+        chart.timeScale().fitContent();
+      }
+      prevCandlesRef.current = candles;
+
+      cleanup = () => {
+        const range = chart.timeScale().getVisibleLogicalRange();
+        if (range) viewRef.current = { from: range.from, to: range.to };
+        chart.remove();
+      };
     })();
 
     return () => {
