@@ -18,8 +18,8 @@ maxSinglePosition = input.float(100.0, title="Max single position %", minval=1.0
 maxMarketExposure = input.float(100.0, title="Max market exposure %", minval=1.0, maxval=100.0, step=1.0) / 100.0
 minimumReserve = input.float(0.0, title="Minimum USDC reserve %", minval=0.0, maxval=100.0, step=1.0) / 100.0
 
-swingLookback = input.int(5, minval=1, title="Swing Low Lookback")
-swingBuffer = input.float(0.35, title="Swing Low Buffer %", minval=0.0, step=0.05) / 100.0
+swingLookback = input.int(12, minval=1, title="Swing Low Lookback")
+swingBuffer = input.float(-0.75, title="Swing Low Buffer %", minval=-5.0, step=0.05) / 100.0
 
 // =====================================================
 // SIDEWAYS FILTER
@@ -27,7 +27,7 @@ swingBuffer = input.float(0.35, title="Swing Low Buffer %", minval=0.0, step=0.0
 
 useSidewaysFilter = input.bool(true, title="Enable Sideways Filter")
 
-sidewaysLookback = input.int(6, minval=2, title="Sideways Lookback")
+sidewaysLookback = input.int(4, minval=2, title="Sideways Lookback")
 sidewaysMaxRangePct = input.float(3.0, minval=0.1, title="Sideways Max Range %", step=0.1) / 100.0
 sidewaysMaxAvgBodyPct = input.float(1.0, minval=0.1, title="Sideways Max Avg Body %", step=0.1) / 100.0
 

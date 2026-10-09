@@ -74,7 +74,7 @@
       {
         "name": "swingBuffer",
         "step": 0.05,
-        "min": 0,
+        "min": -5,
         "max": 3
       },
       {
