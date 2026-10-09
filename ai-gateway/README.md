@@ -17,3 +17,7 @@ Dostępne parametry (nazwy jak w pliku Pine): `hmaLength`, `conversionPeriod`, `
 
 `results.json`: `best.params`, `best.stats`, `changedParams`, `validation`, `months`, `trades`, `trials`.
 Parametry ryzyka (Risk per trade, Max position, exposure, reserve) nie wpływają na wynik — nie tuninguj ich.
+
+## Świeże dane z Binance
+`node scripts/fetch-binance.mjs SUIUSDC 4h 6` — pobiera 6 miesięcy świec spot do `data/SUIUSDC_4h.json`.
+Wpisz tę nazwę w `candleFiles` w `config.json` (pary: SUIUSDC, SOLUSDC, BNBUSDC; interwały np. 1h, 4h).

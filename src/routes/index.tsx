@@ -304,7 +304,7 @@ function Index() {
         <label className={`flex items-center gap-1 text-xs ${liveSrc ? "" : "opacity-50"}`} title="Dociąga nowe świece co 15 s">
           <input type="checkbox" className="tv-check" disabled={!liveSrc} checked={live && !!liveSrc} onChange={(e) => setLive(e.target.checked)} />
           Na żywo
-          {live && liveSrc && <span className="h-2 w-2 animate-pulse rounded-full bg-bull" />}
+          {live && liveSrc && <span className="animate-pulse text-bull">●</span>}
         </label>
         <span className="font-mono text-xs text-muted-foreground">
           {fileName} · {candles.length} świec
