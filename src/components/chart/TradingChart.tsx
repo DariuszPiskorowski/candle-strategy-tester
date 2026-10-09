@@ -168,9 +168,10 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
             {
               time: t.entryTime,
               position: "belowBar" as const,
-              color: "#2962ff",
+              color: up,
               shape: "arrowUp" as const,
-              text: `Long @${t.entryPrice.toPrecision(5)}`,
+              size: 1.5,
+              text: `BUY @${t.entryPrice.toPrecision(5)}`,
             },
             ...(t.exitReason === "Otwarta"
               ? []
@@ -180,6 +181,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
                     position: "aboveBar" as const,
                     color: t.pnl >= 0 ? up : down,
                     shape: "arrowDown" as const,
+                    size: 1.5,
                     text: `${t.exitReason === "STOP_LOSS" ? "SL" : "SELL"} ${t.pnlPct >= 0 ? "+" : ""}${t.pnlPct.toFixed(2)}%`,
                   },
                 ]),
