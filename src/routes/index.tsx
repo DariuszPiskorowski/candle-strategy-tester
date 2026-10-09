@@ -151,6 +151,8 @@ function Index() {
   const [showPlots, setShowPlots] = useState(true);
   const engine = useMemo(() => (strategy ? detectEngine(strategy.code) : undefined), [strategy]);
   const supported = !!engine;
+  const activeEngineId = strategy ? detectEngine(strategy.code)?.id ?? null : null;
+  const strategyList = ENGINES.filter((e) => STRATEGY_SOURCES[e.id]);
   const header = useMemo(() => (strategy ? parsePineHeader(strategy.code) : null), [strategy]);
   const result = useMemo(() => {
     if (!strategy || !engine || !header || candles.length < 50) return null;
