@@ -1,7 +1,7 @@
 import { parseCandles, type Candle } from "./candles";
 
 export const BINANCE_PAIRS = ["SUIUSDC", "SOLUSDC", "BNBUSDC"] as const;
-export const BINANCE_INTERVALS = ["15m", "1h", "4h", "1d"] as const;
+export const BINANCE_INTERVALS = ["1m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "12h", "1d"] as const;
 
 async function klines(symbol: string, interval: string, startTime?: number, limit = 1000) {
   const q = new URLSearchParams({ symbol, interval, limit: String(limit) });
