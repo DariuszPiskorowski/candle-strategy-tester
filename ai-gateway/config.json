@@ -18,7 +18,7 @@
     "maxPasses": 12,
     "parameters": [
       {
-        "name": "hmaLength",
+        "name": "period",
         "step": 1,
         "min": 2,
         "max": 60
@@ -60,7 +60,7 @@
         "max": 90
       },
       {
-        "name": "macdSignalLength",
+        "name": "macdLength",
         "step": 1,
         "min": 2,
         "max": 40
