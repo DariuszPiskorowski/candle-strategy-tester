@@ -11,7 +11,7 @@ import {
   type StrategyColor,
 } from "@/lib/strategy/jarvis";
 import { aggregate, detectInterval, parseCandles, TIMEFRAMES, type Candle } from "@/lib/candles";
-import { ACTIVE_STRATEGY_ID, detectEngine } from "@/strategies/registry";
+import { ACTIVE_STRATEGY_ID, detectEngine, getEngine } from "@/strategies/registry";
 import { STRATEGY_SOURCES } from "@/strategies/sources";
 import { BINANCE_INTERVALS, BINANCE_PAIRS, fetchHistory, fetchLatest } from "@/lib/binance";
 
@@ -132,6 +132,15 @@ function Index() {
     setStrategy({ name: f.name, code: text });
     setParams(parsePineInputs(text));
     setStrategyColors(detectEngine(text)?.parseColors(text) ?? []);
+  }
+
+  function selectStrategy(id: string) {
+    const code = STRATEGY_SOURCES[id];
+    if (!code) return;
+    setStrategy({ name: `${id} (ostatnie najlepsze)`, code });
+    setParams(parsePineInputs(code));
+    setStrategyColors(getEngine(id)?.parseColors(code) ?? []);
+    setStratListOpen(false);
   }
 
   const [params, setParams] = useState<PineInput[]>(() => (strategy ? parsePineInputs(strategy.code) : []));
