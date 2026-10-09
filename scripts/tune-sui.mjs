@@ -30,7 +30,10 @@ const interval = candles[1].time - candles[0].time;
 const gaps = [];
 for (let i = 1; i < candles.length; i++) if (candles[i].time - candles[i - 1].time !== interval) gaps.push(candles[i].time);
 
-const testStart = day(cfg.testStart), testEnd = cfg.testEnd ? day(cfg.testEnd, true) : Math.floor(Date.now() / 1000);
+const now = Math.floor(Date.now() / 1000);
+const sixMonthsAgo = Math.floor(new Date(Date.now() - 183 * 864e5).setUTCHours(0, 0, 0, 0) / 1000);
+const testStart = cfg.testStart ? day(cfg.testStart) : sixMonthsAgo;
+const testEnd = cfg.testEnd ? day(cfg.testEnd, true) : now;
 const valStart = cfg.validationStart ? day(cfg.validationStart) : null;
 const fitWindow = { startTime: testStart, endTime: valStart ? valStart - 1 : testEnd };
 const valWindow = valStart ? { startTime: valStart, endTime: testEnd } : null;
