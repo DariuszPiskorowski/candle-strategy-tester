@@ -49,6 +49,8 @@ const DEFAULTS: IndicatorSettings = {
 function Index() {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [raw, setRaw] = useState<Candle[]>([]);
+  const rawRef = useRef<Candle[]>([]);
+  rawRef.current = raw;
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [tf, setTf] = useState<number | null>(null);
@@ -227,28 +229,20 @@ function Index() {
     if (!live || !liveSrc) return;
     let stop = false;
     const tick = async () => {
+      const cur0 = rawRef.current;
+      if (!cur0.length) return;
       try {
-        setRaw((prev) => {
-          if (!prev.length) return prev;
-          const lastTime = prev[prev.length - 1].time;
-          void fetchLatest(liveSrc.pair, liveSrc.interval, lastTime * 1000)
-            .then((latest) => {
-              if (stop) return;
-              setRaw((cur) => {
-                if (!cur.length) return cur;
-                const curLast = cur[cur.length - 1].time;
-                // tylko aktualizacja bieżącej świecy i dobranie brakujących — nigdy nie rusza historii ani interwału
-                const fresh = latest.filter((c) => c.time >= curLast);
-                if (!fresh.length) return cur;
-                const map = new Map(cur.map((c) => [c.time, c]));
-                for (const c of fresh) map.set(c.time, c);
-                return [...map.values()].sort((a, b) => a.time - b.time);
-              });
-            })
-            .catch(() => {
-              /* chwilowy błąd sieci — spróbuje ponownie */
-            });
-          return prev;
+        const latest = await fetchLatest(liveSrc.pair, liveSrc.interval, cur0[cur0.length - 1].time * 1000);
+        if (stop) return;
+        setRaw((cur) => {
+          if (!cur.length) return cur;
+          const curLast = cur[cur.length - 1].time;
+          // tylko aktualizacja bieżącej świecy i dobranie brakujących — nigdy nie rusza historii ani interwału
+          const fresh = latest.filter((c) => c.time >= curLast);
+          if (!fresh.length) return cur;
+          const map = new Map(cur.map((c) => [c.time, c]));
+          for (const c of fresh) map.set(c.time, c);
+          return [...map.values()].sort((a, b) => a.time - b.time);
         });
       } catch {
         /* chwilowy błąd sieci — spróbuje ponownie */
