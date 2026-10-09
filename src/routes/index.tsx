@@ -99,11 +99,10 @@ function Index() {
     };
   }, [indMenuOpen]);
 
+  // Start: dane z Binance (SUI/USDC 4h) zamiast wbudowanego pliku demo
   useEffect(() => {
-    fetch("/data/demo-candles.json")
-      .then((r) => r.text())
-      .then((t) => setRaw(parseCandles(t)))
-      .catch(() => setError("Nie udało się wczytać danych demo."));
+    void loadBinance();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const baseInterval = useMemo(() => (raw.length ? detectInterval(raw) : 60), [raw]);
