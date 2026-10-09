@@ -250,11 +250,6 @@ function Index() {
             });
           return prev;
         });
-          if (!fresh.length) return prev;
-          const map = new Map(prev.map((c) => [c.time, c]));
-          for (const c of fresh) map.set(c.time, c);
-          return [...map.values()].sort((a, b) => a.time - b.time);
-        });
       } catch {
         /* chwilowy błąd sieci — spróbuje ponownie */
       }
