@@ -50,7 +50,7 @@ const DEFAULTS: IndicatorSettings = {
 function Index() {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [raw, setRaw] = useState<Candle[]>([]);
-  const [fileName, setFileName] = useState("poczatek.customization_6");
+  const [fileName, setFileName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [tf, setTf] = useState<number | null>(null);
   const [chartType, setChartType] = useState<"candles" | "bars" | "line" | "area">("candles");
@@ -99,11 +99,10 @@ function Index() {
     };
   }, [indMenuOpen]);
 
+  // Start: dane z Binance (SUI/USDC 4h) zamiast wbudowanego pliku demo
   useEffect(() => {
-    fetch("/data/demo-candles.json")
-      .then((r) => r.text())
-      .then((t) => setRaw(parseCandles(t)))
-      .catch(() => setError("Nie udało się wczytać danych demo."));
+    void loadBinance();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const baseInterval = useMemo(() => (raw.length ? detectInterval(raw) : 60), [raw]);
