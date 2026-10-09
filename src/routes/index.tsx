@@ -5,15 +5,14 @@ import { Moon, Sun } from "lucide-react";
 import { TradingChart, type IndicatorSettings } from "@/components/chart/TradingChart";
 import { StrategyPanel } from "@/components/strategy/StrategyPanel";
 import {
-  isJarvisStrategy,
   parsePineHeader,
   parsePineInputs,
-  parseStrategyColors,
-  runJarvis,
   type PineInput,
   type StrategyColor,
 } from "@/lib/strategy/jarvis";
 import { aggregate, detectInterval, parseCandles, TIMEFRAMES, type Candle } from "@/lib/candles";
+import { ACTIVE_STRATEGY_ID, detectEngine } from "@/strategies/registry";
+import { STRATEGY_SOURCES } from "@/strategies/sources";
 import { BINANCE_INTERVALS, BINANCE_PAIRS, fetchHistory, fetchLatest } from "@/lib/binance";
 
 export const Route = createFileRoute("/")({
@@ -56,7 +55,10 @@ function Index() {
   const [chartType, setChartType] = useState<"candles" | "bars" | "line" | "area">("candles");
   const [ind, setInd] = useState<IndicatorSettings>(DEFAULTS);
   const [hover, setHover] = useState<Candle | null>(null);
-  const [strategy, setStrategy] = useState<{ name: string; code: string } | null>(null);
+  const [strategy, setStrategy] = useState<{ name: string; code: string } | null>(() => {
+    const code = STRATEGY_SOURCES[ACTIVE_STRATEGY_ID];
+    return code ? { name: `${ACTIVE_STRATEGY_ID} (ostatnie najlepsze)`, code } : null;
+  });
   const [stratDragging, setStratDragging] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [indMenuOpen, setIndMenuOpen] = useState(false);
@@ -129,19 +131,22 @@ function Index() {
     const text = await f.text();
     setStrategy({ name: f.name, code: text });
     setParams(parsePineInputs(text));
-    setStrategyColors(parseStrategyColors(text));
+    setStrategyColors(detectEngine(text)?.parseColors(text) ?? []);
   }
 
-  const [params, setParams] = useState<PineInput[]>([]);
-  const [strategyColors, setStrategyColors] = useState<StrategyColor[]>([]);
+  const [params, setParams] = useState<PineInput[]>(() => (strategy ? parsePineInputs(strategy.code) : []));
+  const [strategyColors, setStrategyColors] = useState<StrategyColor[]>(() =>
+    strategy ? (detectEngine(strategy.code)?.parseColors(strategy.code) ?? []) : [],
+  );
   const [showPlots, setShowPlots] = useState(true);
-  const supported = strategy ? isJarvisStrategy(strategy.code) : false;
+  const engine = useMemo(() => (strategy ? detectEngine(strategy.code) : undefined), [strategy]);
+  const supported = !!engine;
   const header = useMemo(() => (strategy ? parsePineHeader(strategy.code) : null), [strategy]);
   const result = useMemo(() => {
-    if (!strategy || !supported || !header || candles.length < 50) return null;
+    if (!strategy || !engine || !header || candles.length < 50) return null;
     const startTime = fromDate ? Date.parse(`${fromDate}T00:00:00Z`) / 1000 : undefined;
     const endTime = toDate ? Date.parse(`${toDate}T23:59:59Z`) / 1000 : undefined;
-    const tested = runJarvis(
+    const tested = engine.run(
       calculationCandles,
       Object.fromEntries(params.map((p) => [p.name, p.value])),
       header,
@@ -154,7 +159,7 @@ function Index() {
     const from = candles[0].time;
     const to = candles[candles.length - 1].time;
     return { ...tested, plots: tested.plots.map((plot) => ({ ...plot, data: plot.data.filter((point) => point.time >= from && point.time <= to) })) };
-  }, [strategy, supported, header, candles, calculationCandles, fromDate, toDate, params, strategyColors]);
+  }, [strategy, engine, header, candles, calculationCandles, fromDate, toDate, params, strategyColors]);
 
 
   async function loadFiles(files: File[], merge: boolean) {
@@ -646,8 +651,7 @@ function Index() {
             )}
             {strategy && !supported && (
               <p className="text-[11px] leading-relaxed text-bear">
-                Ten skrypt nie jest jeszcze obsługiwany przez symulator. Obsługiwana jest strategia
-                Ichimoku + HullMA + Hull MACD + Jarvis RM.
+                Ta strategia nie ma jeszcze swojego silnika. Dodaj folder z silnikiem, aby ją liczyć.
               </p>
             )}
             {strategy && supported && header && (
