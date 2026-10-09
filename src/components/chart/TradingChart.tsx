@@ -185,6 +185,26 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           ])
           .sort((a, b) => a.time - b.time);
         lc.createSeriesMarkers(main, markers as any);
+        for (const t of strategy.trades) {
+          if (t.exitReason === "Otwarta") continue;
+          const seg = chart.addSeries(
+            lc.LineSeries,
+            {
+              color: "#ffffff",
+              lineWidth: 1,
+              lineStyle: lc.LineStyle.Dashed,
+              priceLineVisible: false,
+              lastValueVisible: false,
+              crosshairMarkerVisible: false,
+              pointMarkersVisible: false,
+            },
+            0,
+          );
+          seg.setData([
+            { time: t.entryTime, value: t.entryPrice },
+            { time: t.exitTime, value: t.exitPrice },
+          ] as any);
+        }
         const eq = chart.addSeries(
           lc.AreaSeries,
           {
