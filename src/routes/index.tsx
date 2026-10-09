@@ -178,6 +178,7 @@ function Index() {
       const names = files.map((f) => f.name.replace(/\.customization$/i, "")).join(" + ");
       setFileName(merge && base.length ? `${fileName} + ${names}` : names);
       setTf(null);
+      setLiveSrc(null);
       setFromDate("");
       setToDate("");
       setError(null);
