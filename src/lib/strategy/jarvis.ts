@@ -341,6 +341,7 @@ export function runJarvis(
   for (let i = 0; i < n; i++) {
     const c = candles[i];
     if (options.startTime !== undefined && c.time < options.startTime) continue;
+    const barStartStop: number | null = pos ? pos.stop : null;
     if (pos) {
       // Conservative bound, not a reconstruction of the true high/low sequence.
       markIntrabar(cash + pos.qty * c.high);
@@ -393,7 +394,9 @@ export function runJarvis(
       }
     }
 
-    stopPlot.push(pos ? { time: time[i], value: pos.stop } : ({ time: time[i] } as { time: number; value: number }));
+    // Linia SL dobija do świecy zamknięcia pozycji (SL lub SELL)
+    const plotStop = pos ? pos.stop : barStartStop;
+    stopPlot.push(plotStop !== null ? { time: time[i], value: plotStop } : ({ time: time[i] } as { time: number; value: number }));
     const accountEquity = cash + (pos ? pos.qty * close[i] : 0);
     markIntrabar(accountEquity);
     equity.push({ time: time[i], value: accountEquity });
