@@ -616,7 +616,44 @@ function Index() {
         {/* Right panel */}
         <aside className="w-[340px] shrink-0 space-y-4 overflow-y-auto border-l border-border p-3">
           <section className="space-y-2">
-            <h2 className="tv-h">Strategia</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="tv-h">Strategia</h2>
+              <button
+                className={`tv-btn ml-auto px-1.5 py-0.5 text-[11px] ${stratListOpen ? "tv-tf-active" : ""}`}
+                onClick={() => setStratListOpen((v) => !v)}
+              >
+                Lista strategii {stratListOpen ? "▴" : "▾"}
+              </button>
+            </div>
+            {stratListOpen && (
+              <div className="space-y-0.5 rounded-md border border-border bg-card p-1.5">
+                {strategyList.length === 0 && (
+                  <p className="text-[11px] text-muted-foreground">Brak strategii w rejestrze.</p>
+                )}
+                {strategyList.map((e) => {
+                  const active = e.id === activeEngineId;
+                  return (
+                    <button
+                      key={e.id}
+                      className={`flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-xs ${
+                        active ? "bg-primary/10 font-semibold" : "hover:bg-secondary"
+                      }`}
+                      onClick={() => (active ? setStratListOpen(false) : selectStrategy(e.id))}
+                    >
+                      <span
+                        className={`grid size-3.5 shrink-0 place-items-center rounded-sm border ${
+                          active ? "border-primary bg-primary text-[9px] text-primary-foreground" : "border-border"
+                        }`}
+                        aria-hidden="true"
+                      >
+                        {active ? "✓" : ""}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate">{e.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <input
               ref={stratInputRef}
               type="file"
