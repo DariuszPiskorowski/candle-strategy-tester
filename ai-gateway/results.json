@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-10-08T19:23:22.931Z",
+  "generatedAt": "2026-10-09T00:35:55.366Z",
   "config": {
-    "_info": "Plik sterujacy dla zewnetrznego AI. Sciezki wzgledne licza sie od tego folderu. Daty w UTC (RRRR-MM-DD). Swiece sprzed testStart sluza tylko do rozgrzewki wskaznikow.",
+    "_info": "Plik sterujacy dla zewnetrznego AI. Sciezki wzgledne licza sie od tego folderu. Daty w UTC (RRRR-MM-DD). Swiece sprzed testStart sluza tylko do rozgrzewki wskaznikow. testEnd: null = teraz (biezaca data i godzina).",
     "mode": "evaluate",
     "dataDir": "../data",
     "strategyFile": "wersja_z_wejsciem_100_i_Filtrem_HA.txt",
@@ -10,7 +10,7 @@
       "poczatek.customization_6.customization"
     ],
     "testStart": "2026-06-01",
-    "testEnd": "2026-09-30",
+    "testEnd": null,
     "validationStart": null,
     "params": {},
     "objective": {
@@ -260,6 +260,12 @@
       "profitPct": 67.05742239673802,
       "ddPct": 13.795654184003686,
       "trades": 1
+    },
+    {
+      "month": "2026-10",
+      "profitPct": 0,
+      "ddPct": 0,
+      "trades": 0
     }
   ],
   "converged": true,
