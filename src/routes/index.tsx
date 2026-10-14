@@ -70,6 +70,8 @@ function Index() {
   const [bnPair, setBnPair] = useState<string>("SUIUSDC");
   const [bnInterval, setBnInterval] = useState<string>("4h");
   const [bnLoading, setBnLoading] = useState(false);
+  const bnLoadingRef = useRef(false);
+  bnLoadingRef.current = bnLoading;
   const [liveSrc, setLiveSrc] = useState<{ pair: string; interval: string } | null>(null);
   const [live, setLive] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
