@@ -12,4 +12,9 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    // Dynamically imported libs are pre-bundled up front so the dev server never re-optimizes
+    // mid-session (that forces a reload and can leave the preview stuck before the app starts).
+    optimizeDeps: { include: ["lightweight-charts", "jspdf", "jspdf-autotable"] },
+  },
 });

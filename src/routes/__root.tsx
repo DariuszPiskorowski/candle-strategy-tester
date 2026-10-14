@@ -101,11 +101,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent as ErrorRouteComponent,
 });
 
+// Strażnik startu: jeśli aplikacja nie uruchomi się w 15 s (np. przerwane pobieranie plików
+// przy budzeniu podglądu), strona sama się przeładowuje — maks. 3 próby z rzędu.
+const BOOT_WATCHDOG = `(function(){var K='candlelab-boot-retry';setTimeout(function(){if(window.__appHydrated)return;var n=+(sessionStorage.getItem(K)||0);if(n>=3)return;sessionStorage.setItem(K,String(n+1));location.reload();},15000);})();`;
+
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="pl">
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: BOOT_WATCHDOG }} />
       </head>
       <body>
         {children}
@@ -117,6 +122,10 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => {
+    (window as unknown as { __appHydrated?: boolean }).__appHydrated = true;
+    window.sessionStorage.removeItem("candlelab-boot-retry");
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
