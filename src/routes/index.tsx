@@ -588,10 +588,23 @@ function Index() {
               </span>
             </div>
           )}
-          {showCountdown && (
-            <div className="pointer-events-none absolute right-3 top-2 z-10 rounded border border-border bg-card/80 px-2 py-1 font-mono text-xs">
-              <span className="text-muted-foreground">Zamknięcie za </span>
-              <span className="text-foreground">{fmtCountdown(Math.max(0, countdownSec ?? 0))}</span>
+          {(showCountdown || !!result?.latestSignals?.length) && (
+            <div className="pointer-events-none absolute right-3 top-8 z-10 max-w-[calc(100%-1.5rem)] bg-card/90 px-2 py-1 font-mono text-xs sm:top-2">
+              {showCountdown && (
+                <div className="mb-1 whitespace-nowrap">
+                  <span className="text-muted-foreground">Zamknięcie za </span>
+                  <span className="text-foreground">{fmtCountdown(Math.max(0, countdownSec ?? 0))}</span>
+                </div>
+              )}
+              {!!result?.latestSignals?.length && (
+                <ul aria-label="Aktualne sygnały wskaźników" className="space-y-0.5">
+                  {result.latestSignals.map(({ name, signal }) => (
+                    <li key={name} className={signal === "BUY" ? "text-bull" : signal === "SELL" ? "text-bear" : signal === "BOCZNY" ? "text-signal-neutral" : "text-muted-foreground"}>
+                      {name}: {signal}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
           {error && (
