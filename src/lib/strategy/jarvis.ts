@@ -1,4 +1,5 @@
 import type { Candle } from "@/lib/candles";
+import { indicatorSignal, type IndicatorSignal } from "./signals";
 
 /* ---------- Pine source helpers ---------- */
 
@@ -187,6 +188,8 @@ export type StrategyResult = {
   trades: Trade[];
   equity: { time: number; value: number }[];
   plots: LinePlot[];
+  /** Read-only states on the latest tested candle, independent of plot visibility. */
+  latestSignals?: IndicatorSignal[];
   stats: {
     initialCapital: number;
     finalEquity: number;
@@ -467,6 +470,12 @@ export function runJarvis(
     trades,
     equity,
     plots,
+    latestSignals: [
+      indicatorSignal("Ichimoku", [[lead1[n - 1], lead2[n - 1]]]),
+      indicatorSignal(resSec === 86400 ? "Daily" : `HTF (${res})`, [[D1[n - 1], D2[n - 1]]]),
+      indicatorSignal("Hull MA", [[hma1[n - 1], hma2[n - 1]], [price[n - 1], hma2[n - 1]]]),
+      indicatorSignal("Hull MACD", [[macd[n - 1], aMacd[n - 1]]]),
+    ],
     stats: {
       initialCapital: header.initialCapital,
       finalEquity,

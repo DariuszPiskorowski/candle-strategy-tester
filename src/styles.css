@@ -61,6 +61,7 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --color-bull: var(--bull);
   --color-bear: var(--bear);
+  --color-signal-neutral: var(--signal-neutral);
 }
 
 :root {
@@ -87,6 +88,7 @@
   --ring: oklch(0.62 0.21 262);
   --bull: oklch(0.68 0.11 178);
   --bear: oklch(0.65 0.18 24);
+  --signal-neutral: oklch(1 0 0);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -125,6 +127,7 @@
   --ring: oklch(0.55 0.22 262);
   --bull: oklch(0.48 0.11 178);
   --bear: oklch(0.55 0.2 24);
+  --signal-neutral: oklch(0.21 0.018 264);
 }
 
 .dark {
