@@ -104,9 +104,13 @@ function Index() {
     };
   }, [indMenuOpen]);
 
-  // Start: dane z Binance (SUI/USDC 4h) zamiast wbudowanego pliku demo
+  // Start: dane z Binance (SUI/USDC 4h); dopóki nie ma żadnych świec, ponawia co 10 s
   useEffect(() => {
     void loadBinance();
+    const id = window.setInterval(() => {
+      if (!rawRef.current.length && !bnLoadingRef.current) void loadBinance();
+    }, 10000);
+    return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
