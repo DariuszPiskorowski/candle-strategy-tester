@@ -595,7 +595,7 @@ function Index() {
             </div>
           )}
           {(showCountdown || !!result?.latestSignals?.length) && (
-            <div className="pointer-events-none absolute right-3 top-8 z-10 max-w-[calc(100%-1.5rem)] bg-card/90 px-2 py-1 font-mono text-xs sm:top-2">
+            <div className="pointer-events-none absolute right-[74px] top-8 z-10 max-w-[calc(100%-5.5rem)] bg-card/90 px-2 py-1 text-right font-mono text-xs sm:top-2">
               {showCountdown && (
                 <div className="mb-1 whitespace-nowrap">
                   <span className="text-muted-foreground">Zamknięcie za </span>
