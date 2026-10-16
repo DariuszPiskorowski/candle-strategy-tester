@@ -141,7 +141,13 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
       const addLine = (data: { time: number; value: number }[], color: string, pane = 0, width = 2) => {
         const s = chart.addSeries(
           lc.LineSeries,
-          { color, lineWidth: width as 1 | 2 | 3, priceLineVisible: false, lastValueVisible: false },
+          {
+            color,
+            lineWidth: width as 1 | 2 | 3,
+            ...(pane === 0 ? { priceFormat } : {}),
+            priceLineVisible: false,
+            lastValueVisible: false,
+          },
           pane,
         );
         s.setData((data) as any);
