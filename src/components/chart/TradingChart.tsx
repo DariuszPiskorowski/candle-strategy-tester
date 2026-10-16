@@ -118,7 +118,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
         });
         main.setData((candles.map((c) => ({ time: c.time, value: c.close }))) as any);
       } else {
-        main = chart.addSeries(lc.LineSeries, { color: "#2962ff", lineWidth: 2 });
+        main = chart.addSeries(lc.LineSeries, { priceFormat, color: "#2962ff", lineWidth: 2 });
         main.setData((candles.map((c) => ({ time: c.time, value: c.close }))) as any);
       }
 
