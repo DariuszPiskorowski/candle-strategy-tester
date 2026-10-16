@@ -3,6 +3,21 @@ import type { Candle } from "@/lib/candles";
 import { bollinger, ema, macd, rsi, sma } from "@/lib/indicators";
 import type { StrategyResult } from "@/lib/strategy/jarvis";
 
+// precyzja ceny z danych: tyle miejsc po przecinku, ile najwyżej ma któraś świeca (min. 2, maks. 8)
+function pricePrecision(cs: Candle[]): number {
+  let maxDec = 0;
+  for (const c of cs) {
+    for (const v of [c.open, c.high, c.low, c.close]) {
+      let s = v.toString();
+      if (s.includes("e")) s = v.toFixed(8).replace(/0+$/, "");
+      const i = s.indexOf(".");
+      if (i >= 0) maxDec = Math.max(maxDec, s.length - i - 1);
+    }
+  }
+  return Math.min(Math.max(maxDec, 2), 8);
+}
+
+
 export type IndicatorSettings = {
   ma1: { on: boolean; length: number; type: "SMA" | "EMA" };
   ma2: { on: boolean; length: number; type: "SMA" | "EMA" };
