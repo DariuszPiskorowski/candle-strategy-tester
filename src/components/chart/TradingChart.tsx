@@ -221,6 +221,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
               color: "#ffffff",
               lineWidth: 1,
               lineStyle: lc.LineStyle.Dashed,
+              priceFormat,
               priceLineVisible: false,
               lastValueVisible: false,
               crosshairMarkerVisible: false,
