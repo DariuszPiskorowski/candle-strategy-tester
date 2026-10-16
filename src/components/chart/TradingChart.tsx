@@ -3,6 +3,21 @@ import type { Candle } from "@/lib/candles";
 import { bollinger, ema, macd, rsi, sma } from "@/lib/indicators";
 import type { StrategyResult } from "@/lib/strategy/jarvis";
 
+// precyzja ceny z danych: tyle miejsc po przecinku, ile najwyżej ma któraś świeca (min. 2, maks. 8)
+function pricePrecision(cs: Candle[]): number {
+  let maxDec = 0;
+  for (const c of cs) {
+    for (const v of [c.open, c.high, c.low, c.close]) {
+      let s = v.toString();
+      if (s.includes("e")) s = v.toFixed(8).replace(/0+$/, "");
+      const i = s.indexOf(".");
+      if (i >= 0) maxDec = Math.max(maxDec, s.length - i - 1);
+    }
+  }
+  return Math.min(Math.max(maxDec, 2), 8);
+}
+
+
 export type IndicatorSettings = {
   ma1: { on: boolean; length: number; type: "SMA" | "EMA" };
   ma2: { on: boolean; length: number; type: "SMA" | "EMA" };
@@ -73,12 +88,15 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
 
       const up = "#26a69a";
       const down = "#ef5350";
+      const dec = pricePrecision(candles);
+      const priceFormat = { type: "price" as const, precision: dec, minMove: Math.pow(10, -dec) };
       let main:
         | ReturnType<typeof chart.addSeries>
         | ReturnType<typeof chart.addSeries<"Line">>;
 
       if (chartType === "candles") {
         main = chart.addSeries(lc.CandlestickSeries, {
+          priceFormat,
           upColor: up,
           downColor: down,
           borderUpColor: up,
@@ -88,10 +106,11 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
         });
         main.setData((candles) as any);
       } else if (chartType === "bars") {
-        main = chart.addSeries(lc.BarSeries, { upColor: up, downColor: down });
+        main = chart.addSeries(lc.BarSeries, { priceFormat, upColor: up, downColor: down });
         main.setData((candles) as any);
       } else if (chartType === "area") {
         main = chart.addSeries(lc.AreaSeries, {
+          priceFormat,
           lineColor: "#2962ff",
           topColor: "rgba(41,98,255,0.35)",
           bottomColor: "rgba(41,98,255,0.02)",
@@ -99,7 +118,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
         });
         main.setData((candles.map((c) => ({ time: c.time, value: c.close }))) as any);
       } else {
-        main = chart.addSeries(lc.LineSeries, { color: "#2962ff", lineWidth: 2 });
+        main = chart.addSeries(lc.LineSeries, { priceFormat, color: "#2962ff", lineWidth: 2 });
         main.setData((candles.map((c) => ({ time: c.time, value: c.close }))) as any);
       }
 
@@ -122,7 +141,13 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
       const addLine = (data: { time: number; value: number }[], color: string, pane = 0, width = 2) => {
         const s = chart.addSeries(
           lc.LineSeries,
-          { color, lineWidth: width as 1 | 2 | 3, priceLineVisible: false, lastValueVisible: false },
+          {
+            color,
+            lineWidth: width as 1 | 2 | 3,
+            ...(pane === 0 ? { priceFormat } : {}),
+            priceLineVisible: false,
+            lastValueVisible: false,
+          },
           pane,
         );
         s.setData((data) as any);
@@ -196,6 +221,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
               color: "#ffffff",
               lineWidth: 1,
               lineStyle: lc.LineStyle.Dashed,
+              priceFormat,
               priceLineVisible: false,
               lastValueVisible: false,
               crosshairMarkerVisible: false,
