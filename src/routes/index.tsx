@@ -262,7 +262,9 @@ function Index() {
     };
   }, [live, liveSrc]);
 
-  const last = hover ?? candles[candles.length - 1];
+  // OHLC w lewym górnym rogu zawsze pokazuje aktualną (ostatnią) świecę — aktualizuje się z każdym tickiem
+  void hover;
+  const last = candles[candles.length - 1];
   const prev = last ? candles[candles.indexOf(last) - 1] : undefined;
   const changePct = last && prev ? ((last.close - prev.close) / prev.close) * 100 : 0;
   const dec = last && last.close < 10 ? 5 : 2;
