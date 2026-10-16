@@ -88,12 +88,15 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
 
       const up = "#26a69a";
       const down = "#ef5350";
+      const dec = pricePrecision(candles);
+      const priceFormat = { type: "price" as const, precision: dec, minMove: Math.pow(10, -dec) };
       let main:
         | ReturnType<typeof chart.addSeries>
         | ReturnType<typeof chart.addSeries<"Line">>;
 
       if (chartType === "candles") {
         main = chart.addSeries(lc.CandlestickSeries, {
+          priceFormat,
           upColor: up,
           downColor: down,
           borderUpColor: up,
