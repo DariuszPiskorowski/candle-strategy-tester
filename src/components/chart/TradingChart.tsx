@@ -106,10 +106,11 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
         });
         main.setData((candles) as any);
       } else if (chartType === "bars") {
-        main = chart.addSeries(lc.BarSeries, { upColor: up, downColor: down });
+        main = chart.addSeries(lc.BarSeries, { priceFormat, upColor: up, downColor: down });
         main.setData((candles) as any);
       } else if (chartType === "area") {
         main = chart.addSeries(lc.AreaSeries, {
+          priceFormat,
           lineColor: "#2962ff",
           topColor: "rgba(41,98,255,0.35)",
           bottomColor: "rgba(41,98,255,0.02)",
