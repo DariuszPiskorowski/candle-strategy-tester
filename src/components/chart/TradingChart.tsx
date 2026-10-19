@@ -194,6 +194,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
         if (showPlots) for (const pl of strategy.plots) if (pl.data.length) addLine(pl.data, pl.color, 0, pl.width);
         const markers = strategy.trades
           .flatMap((t) => [
+
             t.side === "SELL"
               ? {
                   time: t.entryTime,
