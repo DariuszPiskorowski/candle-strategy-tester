@@ -467,6 +467,27 @@ export function runJarvis(
     });
   }
 
+  if (short) {
+    const s0 = short;
+    const px = close[n - 1];
+    const pnl = s0.qty * (s0.entryPrice - px) - s0.comm;
+    trades.push({
+      side: "SELL",
+      entryTime: time[s0.entryIdx],
+      entryPrice: s0.entryPrice,
+      exitTime: time[n - 1],
+      exitPrice: px,
+      qty: s0.qty,
+      notional: s0.notional,
+      stop: NaN,
+      exitReason: "Otwarta",
+      pnl,
+      pnlPct: (pnl / s0.notional) * 100,
+      commission: s0.comm,
+      bars: n - 1 - s0.entryIdx,
+    });
+  }
+
   /* plots */
   const toLine = (s: Series, off = 0, colorAt?: (i: number) => string) => {
     const out: { time: number; value: number; color?: string }[] = [];
