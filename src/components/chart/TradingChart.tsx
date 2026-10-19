@@ -183,7 +183,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
       if (indicators.macd.on) {
         const m = macd(candles, indicators.macd.fast, indicators.macd.slow, indicators.macd.signal);
         const hist = chart.addSeries(lc.HistogramSeries, { priceLineVisible: false }, pane);
-        hist.setData((m.histogram) as any);
+        hist.setData(m.histogram.map((point) => ({ ...point, time: sh(point.time) })) as any);
         addLine(m.macdLine, "#2962ff", pane, 1);
         addLine(m.signalLine, "#ff9800", pane, 1);
         chart.panes()[pane]?.setHeight(120);
