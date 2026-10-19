@@ -382,7 +382,7 @@ export function runJarvis(
   for (let i = 0; i < n; i++) {
     const c = candles[i];
     if (options.startTime !== undefined && c.time < options.startTime) continue;
-    const barStartStop: number | null = pos ? pos.stop : null;
+    const barStartStop: number | null = pos ? pos.stop : short ? short.stop : null;
     if (pos) {
       // Conservative bound, not a reconstruction of the true high/low sequence.
       markIntrabar(cash + pos.qty * c.high);
