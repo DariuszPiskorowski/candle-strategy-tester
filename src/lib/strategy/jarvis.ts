@@ -423,58 +423,45 @@ export function runJarvis(
     const sellC =
       valid && hma1[i] < hma2[i] && D1[i] < D2[i] && macd[i] < aMacd[i] && price[i] < hma2[i] && lead1[i] < lead2[i];
 
+    // Short is closed (SUI bought back with all proceeds) on the BUY signal.
     if (short) {
-      // Short is closed (SUI bought back with all proceeds) on the BUY signal.
-      if (longC) {
-        const px = close[i];
-        const buyBackComm = short.qty * px * comm;
-        const pnl = short.qty * (short.entryPrice - px) - short.comm - buyBackComm;
-        cash += short.notional + short.qty * (short.entryPrice - px) - buyBackComm;
-        trades.push({
-          side: "SELL",
-          entryTime: time[short.entryIdx],
-          entryPrice: short.entryPrice,
-          exitTime: time[i],
-          exitPrice: px,
-          qty: short.qty,
-          notional: short.notional,
-          stop: NaN,
-          exitReason: "Strategy BUY",
-          pnl,
-          pnlPct: (pnl / short.notional) * 100,
-          commission: short.comm + buyBackComm,
-          bars: i - short.entryIdx,
-        });
-        short = null;
-      }
+      if (longC) closeShort(i, close[i], "Strategy BUY");
+      else shortStopArmed = true;
     }
     if (pos) {
       if (sellC) closePos(i, close[i], "Strategy SELL");
       else stopArmed = true;
-    } else if (longC && !short) {
-      const entry = close[i];
-      const cs = candStop[i];
-      // Use all available spot cash, including the BUY commission.
-      // Stop distance affects the stop, never the quantity.
-      const finalNotional = Math.max(cash, 0) / (1 + comm);
-      const qty = entry > 0 ? finalNotional / entry : 0;
-      if (cs > 0 && cs < entry && finalNotional > 0 && qty > 0) {
-        const entryComm = finalNotional * comm;
-        cash -= finalNotional + entryComm;
-        if (Math.abs(cash) < 1e-10) cash = 0;
-        pos = { qty, entryPrice: entry, entryIdx: i, stop: cs, notional: finalNotional, comm: entryComm };
-        stopArmed = false;
-      }
-    } else if (sellC && !short && !pos) {
-      // SELL entry: swap the whole USDC portfolio to SUI, sell it all at once.
-      const entry = close[i];
-      const finalNotional = Math.max(cash, 0) / (1 + comm);
-      const qty = entry > 0 ? finalNotional / entry : 0;
-      if (finalNotional > 0 && qty > 0) {
-        const entryComm = finalNotional * comm;
-        cash -= finalNotional + entryComm;
-        if (Math.abs(cash) < 1e-10) cash = 0;
-        short = { qty, entryPrice: entry, entryIdx: i, notional: finalNotional, comm: entryComm };
+    }
+    // Entries are checked after closes, so a SELL signal that closes a BUY
+    // opens the short on the very same bar (and vice versa).
+    if (!pos && !short) {
+      if (longC) {
+        const entry = close[i];
+        const cs = candStop[i];
+        // Use all available spot cash, including the BUY commission.
+        // Stop distance affects the stop, never the quantity.
+        const finalNotional = Math.max(cash, 0) / (1 + comm);
+        const qty = entry > 0 ? finalNotional / entry : 0;
+        if (cs > 0 && cs < entry && finalNotional > 0 && qty > 0) {
+          const entryComm = finalNotional * comm;
+          cash -= finalNotional + entryComm;
+          if (Math.abs(cash) < 1e-10) cash = 0;
+          pos = { qty, entryPrice: entry, entryIdx: i, stop: cs, notional: finalNotional, comm: entryComm };
+          stopArmed = false;
+        }
+      } else if (sellC) {
+        // SELL entry: swap the whole USDC portfolio to SUI, sell it all at once.
+        const entry = close[i];
+        const cs = candStopShort[i];
+        const finalNotional = Math.max(cash, 0) / (1 + comm);
+        const qty = entry > 0 ? finalNotional / entry : 0;
+        if (cs > entry && finalNotional > 0 && qty > 0) {
+          const entryComm = finalNotional * comm;
+          cash -= finalNotional + entryComm;
+          if (Math.abs(cash) < 1e-10) cash = 0;
+          short = { qty, entryPrice: entry, entryIdx: i, stop: cs, notional: finalNotional, comm: entryComm };
+          shortStopArmed = false;
+        }
       }
     }
 
