@@ -329,6 +329,7 @@ export function runJarvis(
     if (intrabarPeak > 0) maxIntrabarDrawdownPct = Math.max(maxIntrabarDrawdownPct, ((intrabarPeak - value) / intrabarPeak) * 100);
   };
   let stopArmed = false; // strategy.exit is placed at bar close and becomes active from the next bar
+  let shortStopArmed = false;
 
   const closePos = (i: number, px: number, reason: Trade["exitReason"]) => {
     if (!pos) return;
