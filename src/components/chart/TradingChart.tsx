@@ -190,25 +190,43 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
         if (showPlots) for (const pl of strategy.plots) if (pl.data.length) addLine(pl.data, pl.color, 0, pl.width);
         const markers = strategy.trades
           .flatMap((t) => [
-            {
-              time: t.entryTime,
-              position: "belowBar" as const,
-              color: up,
-              shape: "arrowUp" as const,
-              size: 1.5,
-              text: `BUY @${t.entryPrice.toPrecision(5)}`,
-            },
+            t.side === "SELL"
+              ? {
+                  time: t.entryTime,
+                  position: "aboveBar" as const,
+                  color: down,
+                  shape: "arrowDown" as const,
+                  size: 1.5,
+                  text: `SELL @${t.entryPrice.toPrecision(5)}`,
+                }
+              : {
+                  time: t.entryTime,
+                  position: "belowBar" as const,
+                  color: up,
+                  shape: "arrowUp" as const,
+                  size: 1.5,
+                  text: `BUY @${t.entryPrice.toPrecision(5)}`,
+                },
             ...(t.exitReason === "Otwarta"
               ? []
               : [
-                  {
-                    time: t.exitTime,
-                    position: "aboveBar" as const,
-                    color: t.pnl >= 0 ? up : down,
-                    shape: "arrowDown" as const,
-                    size: 1.5,
-                    text: `${t.exitReason === "STOP_LOSS" ? "SL" : "SELL"} ${t.pnlPct >= 0 ? "+" : ""}${t.pnlPct.toFixed(2)}%`,
-                  },
+                  t.side === "SELL"
+                    ? {
+                        time: t.exitTime,
+                        position: "belowBar" as const,
+                        color: t.pnl >= 0 ? up : down,
+                        shape: "arrowUp" as const,
+                        size: 1.5,
+                        text: `BUY ${t.pnlPct >= 0 ? "+" : ""}${t.pnlPct.toFixed(2)}%`,
+                      }
+                    : {
+                        time: t.exitTime,
+                        position: "aboveBar" as const,
+                        color: t.pnl >= 0 ? up : down,
+                        shape: "arrowDown" as const,
+                        size: 1.5,
+                        text: `${t.exitReason === "STOP_LOSS" ? "SL" : "SELL"} ${t.pnlPct >= 0 ? "+" : ""}${t.pnlPct.toFixed(2)}%`,
+                      },
                 ]),
           ])
           .sort((a, b) => a.time - b.time);
