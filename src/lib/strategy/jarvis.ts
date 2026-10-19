@@ -397,6 +397,9 @@ export function runJarvis(
     if (pos && stopArmed && c.low <= pos.stop) {
       closePos(i, Math.min(c.open, pos.stop), "STOP_LOSS");
     }
+    if (short && shortStopArmed && c.high >= short.stop) {
+      closeShort(i, Math.max(c.open, short.stop), "STOP_LOSS");
+    }
 
     // 2) script on bar close
     const ok = (...v: number[]) => v.every(Number.isFinite);
