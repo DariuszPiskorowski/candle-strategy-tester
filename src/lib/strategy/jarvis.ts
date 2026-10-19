@@ -311,6 +311,8 @@ export function runJarvis(
   let cash = header.initialCapital;
   let pos: { qty: number; entryPrice: number; entryIdx: number; stop: number; notional: number; comm: number } | null =
     null;
+  // Short: full capital swapped USDC->SUI->sold; profit when price falls.
+  let short: { qty: number; entryPrice: number; entryIdx: number; notional: number; comm: number } | null = null;
   let intrabarPeak = header.initialCapital;
   let maxIntrabarDrawdownPct = 0;
   const markIntrabar = (value: number) => {
@@ -325,6 +327,7 @@ export function runJarvis(
     const pnl = pos.qty * (px - pos.entryPrice) - pos.comm - exitComm;
     cash += pos.qty * px - exitComm;
     trades.push({
+      side: "BUY",
       entryTime: time[pos.entryIdx],
       entryPrice: pos.entryPrice,
       exitTime: time[i],
