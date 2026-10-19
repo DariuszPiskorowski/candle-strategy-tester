@@ -29,7 +29,7 @@ export function StrategyPanel({ header, params, onParams, colors, onColors, resu
     <div className="space-y-2">
       <div className="text-xs font-semibold">{header.title}</div>
       <div className="text-[11px] text-muted-foreground">
-        Kapitał {header.initialCapital} USDC · prowizja {header.commissionPct}% · spot 100% · tylko BUY
+        Kapitał {header.initialCapital} USDC · prowizja {header.commissionPct}% · spot 100% · BUY i SELL
       </div>
       {result && onPdf && (
         <button
@@ -101,6 +101,9 @@ export function StrategyPanel({ header, params, onParams, colors, onColors, resu
               ["Maks. obsunięcie", `${fmt(s.maxDrawdown)} USD (${fmt(s.maxDrawdownPct)}%)`, -1],
               ["DD — ostrożna granica OHLC", `${fmt(s.maxIntrabarDrawdownPct)}%`, -1],
               ["Prowizje", `${fmt(s.commission)} USD`],
+              ["Portfel USDC", `${fmt(s.usdcBalance)} USD`],
+              ["Portfel SUI", `${fmt(s.suiBalance, 4)} SUI (${fmt(s.suiValueUsdc)} USD)`],
+              ["Razem w USDC", `${fmt(s.totalUsdc)} USD`, s.totalUsdc - s.initialCapital],
               ["Śr. długość", `${fmt(s.avgBars, 1)} świec`],
               ["Wyjścia SELL / SL", `${s.signalExits} / ${s.stopExits}`],
             ] as [string, string, number?][]
@@ -119,7 +122,9 @@ export function StrategyPanel({ header, params, onParams, colors, onColors, resu
           {[...result.trades].reverse().map((t, i) => (
             <div key={t.entryTime} className="rounded border border-border bg-card p-1.5 font-mono text-[10.5px] leading-snug">
               <div className="flex justify-between">
-                <span>#{result.trades.length - i} BUY</span>
+                <span>
+                  #{result.trades.length - i} {t.side ?? "BUY"}
+                </span>
                 <span className={cls(t.pnl)}>
                   {t.pnl >= 0 ? "+" : ""}
                   {fmt(t.pnl)} USD ({fmt(t.pnlPct)}%)
@@ -133,7 +138,7 @@ export function StrategyPanel({ header, params, onParams, colors, onColors, resu
                 <span className={t.exitReason === "STOP_LOSS" ? "text-bear" : ""}>{t.exitReason}</span>
               </div>
               <div className="text-muted-foreground">
-                Wartość {fmt(t.notional)} USD · SL {t.stop.toFixed(dec)} · {t.bars} świec
+                Wartość {fmt(t.notional)} USD{Number.isFinite(t.stop) ? ` · SL ${t.stop.toFixed(dec)}` : ""} · {t.bars} świec
               </div>
             </div>
           ))}
