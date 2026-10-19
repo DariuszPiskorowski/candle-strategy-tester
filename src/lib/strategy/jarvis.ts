@@ -316,7 +316,9 @@ export function runJarvis(
 
   const trades: Trade[] = [];
   const equity: { time: number; value: number }[] = [];
-  const stopPlot: { time: number; value: number }[] = [];
+  // Osobne serie SL dla pozycji BUY (pod ceną) i SELL (nad ceną) — nigdy nie łączą się w jedną linię.
+  const stopLongPlot: { time: number; value: number }[] = [];
+  const stopShortPlot: { time: number; value: number }[] = [];
   let cash = header.initialCapital;
   let pos: { qty: number; entryPrice: number; entryIdx: number; stop: number; notional: number; comm: number } | null =
     null;
