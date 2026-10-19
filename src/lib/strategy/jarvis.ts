@@ -311,6 +311,8 @@ export function runJarvis(
   const aMacd = hma(macd, sigL);
 
   const candStop = lowest(low, swingLookback).map((v) => v * (1 - swingBuffer));
+  // Short stop: swing high mirror image — buffer above the high (negative buffer tightens it below).
+  const candStopShort = highest(high, swingLookback).map((v) => v * (1 + swingBuffer));
 
   const trades: Trade[] = [];
   const equity: { time: number; value: number }[] = [];
@@ -319,7 +321,7 @@ export function runJarvis(
   let pos: { qty: number; entryPrice: number; entryIdx: number; stop: number; notional: number; comm: number } | null =
     null;
   // Short: full capital swapped USDC->SUI->sold; profit when price falls.
-  let short: { qty: number; entryPrice: number; entryIdx: number; notional: number; comm: number } | null = null;
+  let short: { qty: number; entryPrice: number; entryIdx: number; stop: number; notional: number; comm: number } | null = null;
   let intrabarPeak = header.initialCapital;
   let maxIntrabarDrawdownPct = 0;
   const markIntrabar = (value: number) => {
