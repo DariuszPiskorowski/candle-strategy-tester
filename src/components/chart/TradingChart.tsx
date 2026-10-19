@@ -108,10 +108,10 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           wickUpColor: up,
           wickDownColor: down,
         });
-        main.setData((candles) as any);
+        main.setData(candles.map((c) => ({ ...c, time: sh(c.time) })) as any);
       } else if (chartType === "bars") {
         main = chart.addSeries(lc.BarSeries, { priceFormat, upColor: up, downColor: down });
-        main.setData((candles) as any);
+        main.setData(candles.map((c) => ({ ...c, time: sh(c.time) })) as any);
       } else if (chartType === "area") {
         main = chart.addSeries(lc.AreaSeries, {
           priceFormat,
