@@ -217,6 +217,13 @@ export type StrategyResult = {
     avgBars: number;
     stopExits: number;
     signalExits: number;
+    /** Końcowe saldo portfela USDC. */
+    usdcBalance: number;
+    /** Końcowe saldo portfeli w SUI (sztuki i wartość w USDC po ostatniej cenie). */
+    suiBalance: number;
+    suiValueUsdc: number;
+    /** Suma obu portfeli w USDC. */
+    totalUsdc: number;
   };
 };
 
