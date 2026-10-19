@@ -355,6 +355,10 @@ export function runJarvis(
       const worstPrice = stopArmed && c.low <= pos.stop ? Math.min(c.open, pos.stop) : c.low;
       markIntrabar(cash + pos.qty * worstPrice);
     }
+    if (short) {
+      // Worst case for a short inside the candle is the high.
+      markIntrabar(cash + short.notional + short.qty * (short.entryPrice - c.high));
+    }
     // 1) intrabar stop from order placed on previous bar
     if (pos && stopArmed && c.low <= pos.stop) {
       closePos(i, Math.min(c.open, pos.stop), "STOP_LOSS");
