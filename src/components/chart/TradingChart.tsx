@@ -86,6 +86,10 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
         autoSize: true,
       });
 
+      // Wykres rysuje czas w strefie przeglądarki; przesunięcie znaczników czasu
+      // o offset strefy sprawia, że oś pokazuje czas UTC, tak jak Binance.
+      const tzShift = new Date().getTimezoneOffset() * 60;
+      const sh = (t: number) => (t + tzShift) as typeof t;
       const up = "#26a69a";
       const down = "#ef5350";
       const dec = pricePrecision(candles);
