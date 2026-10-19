@@ -222,7 +222,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
                         color: t.pnl >= 0 ? up : down,
                         shape: "arrowUp" as const,
                         size: 1.5,
-                        text: `BUY ${t.pnlPct >= 0 ? "+" : ""}${t.pnlPct.toFixed(2)}%`,
+                        text: `${t.exitReason === "STOP_LOSS" ? "SL" : "BUY"} ${t.pnlPct >= 0 ? "+" : ""}${t.pnlPct.toFixed(2)}%`,
                       }
                     : {
                         time: t.exitTime,
