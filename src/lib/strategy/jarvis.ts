@@ -440,7 +440,8 @@ export function runJarvis(
     // Linia SL dobija do świecy zamknięcia pozycji (SL lub SELL)
     const plotStop = pos ? pos.stop : barStartStop;
     stopPlot.push(plotStop !== null ? { time: time[i], value: plotStop } : ({ time: time[i] } as { time: number; value: number }));
-    const accountEquity = cash + (pos ? pos.qty * close[i] : 0);
+    const accountEquity = cash + (pos ? pos.qty * close[i] : 0) +
+      (short ? short.notional + short.qty * (short.entryPrice - close[i]) : 0);
     markIntrabar(accountEquity);
     equity.push({ time: time[i], value: accountEquity });
   }
