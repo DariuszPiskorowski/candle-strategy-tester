@@ -469,7 +469,6 @@ export function runJarvis(
     }
 
     // Linia SL dobija do świecy zamknięcia pozycji (SL lub SELL); BUY i SELL mają osobne serie.
-    const barStartSide2 = barStartSide;
     const longStopValue = pos ? pos.stop : barStartSide === "long" ? barStartStop : null;
     const shortStopValue = short ? short.stop : barStartSide === "short" ? barStartStop : null;
     const pushStop = (arr: { time: number; value: number }[], v: number | null) =>
