@@ -451,6 +451,7 @@ export function runJarvis(
     const px = close[n - 1];
     const pnl = p0.qty * (px - p0.entryPrice) - p0.comm;
     trades.push({
+      side: "BUY",
       entryTime: time[p0.entryIdx],
       entryPrice: p0.entryPrice,
       exitTime: time[n - 1],
