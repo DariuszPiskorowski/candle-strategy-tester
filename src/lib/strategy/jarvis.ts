@@ -218,6 +218,7 @@ export type StrategyResult = {
     stopExits: number;
     signalExits: number;
     /** Końcowe saldo portfela USDC. */
+    positionSide: "BUY" | "SELL" | null;
     usdcBalance: number;
     /** Końcowe saldo portfeli w SUI (sztuki i wartość w USDC po ostatniej cenie). */
     suiBalance: number;
@@ -601,9 +602,10 @@ export function runJarvis(
       stopExits: closed.filter((t) => t.exitReason === "STOP_LOSS").length,
       signalExits: closed.filter((t) => t.exitReason === "Strategy SELL").length,
       // Podział na dwa portfele po ostatniej świecy: SUI (otwarty BUY) albo USDC.
-      usdcBalance: pos ? pos.qty * close[n - 1] : short ? cash + short.notional + short.qty * (short.entryPrice - close[n - 1]) : cash,
-      suiBalance: pos ? pos.qty : close[n - 1] > 0 ? finalEquity / close[n - 1] : 0,
-      suiValueUsdc: pos ? pos.qty * close[n - 1] : finalEquity,
+      positionSide: pos ? "BUY" : short ? "SELL" : null,
+      usdcBalance: pos ? cash : short ? cash + short.notional + short.qty * (short.entryPrice - close[n - 1]) : cash,
+      suiBalance: pos ? pos.qty : 0,
+      suiValueUsdc: pos ? pos.qty * close[n - 1] : 0,
       totalUsdc: finalEquity,
     },
   };
