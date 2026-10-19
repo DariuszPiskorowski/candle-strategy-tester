@@ -235,7 +235,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
                 ]),
           ])
           .sort((a, b) => a.time - b.time);
-        lc.createSeriesMarkers(main, markers as any);
+        lc.createSeriesMarkers(main, markers.map((m) => ({ ...m, time: sh(m.time) })) as any);
         for (const t of strategy.trades) {
           if (t.exitReason === "Otwarta") continue;
           const seg = chart.addSeries(
@@ -253,8 +253,8 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
             0,
           );
           seg.setData([
-            { time: t.entryTime, value: t.entryPrice },
-            { time: t.exitTime, value: t.exitPrice },
+            { time: sh(t.entryTime), value: t.entryPrice },
+            { time: sh(t.exitTime), value: t.exitPrice },
           ] as any);
         }
         const eq = chart.addSeries(
@@ -269,7 +269,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           },
           pane,
         );
-        eq.setData(strategy.equity as any);
+        eq.setData(strategy.equity.map((point) => ({ ...point, time: sh(point.time) })) as any);
         chart.panes()[pane]?.setHeight(130);
         pane++;
       }
@@ -279,7 +279,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           hoverRef.current?.(null);
           return;
         }
-        const found = candles.find((c) => c.time === param.time);
+        const found = candles.find((c) => sh(c.time) === param.time);
         hoverRef.current?.(found ?? null);
       });
 
