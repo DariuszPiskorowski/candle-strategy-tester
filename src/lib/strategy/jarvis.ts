@@ -466,7 +466,7 @@ export function runJarvis(
     }
 
     // Linia SL dobija do świecy zamknięcia pozycji (SL lub SELL)
-    const plotStop = pos ? pos.stop : barStartStop;
+    const plotStop = pos ? pos.stop : short ? short.stop : barStartStop;
     stopPlot.push(plotStop !== null ? { time: time[i], value: plotStop } : ({ time: time[i] } as { time: number; value: number }));
     const accountEquity = cash + (pos ? pos.qty * close[i] : 0) +
       (short ? short.notional + short.qty * (short.entryPrice - close[i]) : 0);
@@ -507,7 +507,7 @@ export function runJarvis(
       exitPrice: px,
       qty: s0.qty,
       notional: s0.notional,
-      stop: NaN,
+      stop: s0.stop,
       exitReason: "Otwarta",
       pnl,
       pnlPct: (pnl / s0.notional) * 100,
