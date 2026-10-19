@@ -48,3 +48,18 @@ test('future candles do not alter trades or equity before the test end',()=> {
   assert.deepEqual(a,b);
   assert.ok(a.stats.maxIntrabarDrawdownPct>=a.stats.maxDrawdownPct-1e-9);
 });
+
+test('SELL otwiera sie przy sygnale sprzedazy i zarabia na spadku ceny',()=> {
+  const r=runJarvis(candles,params,header);
+  const shorts=r.trades.filter(t=>t.side==='SELL');
+  assert.ok(shorts.length>0,'fixture must exercise SELL entries');
+  for(const t of shorts) {
+    assert.ok(Math.abs(t.qty*t.entryPrice-t.notional)<1e-8);
+    if(t.exitReason!=='Otwarta') {
+      const gross=t.qty*(t.entryPrice-t.exitPrice);
+      const comm=t.notional*0.0025+t.qty*t.exitPrice*0.0025;
+      assert.ok(Math.abs(t.pnl-(gross-comm))<1e-8);
+      if(t.exitPrice<t.entryPrice) assert.ok(gross>0);
+    }
+  }
+});

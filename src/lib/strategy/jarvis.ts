@@ -1,5 +1,5 @@
 import type { Candle } from "@/lib/candles";
-import { indicatorSignal, type IndicatorSignal } from "./signals";
+import { indicatorSignal, type IndicatorSignal } from "./signals.ts";
 
 /* ---------- Pine source helpers ---------- */
 
@@ -168,6 +168,7 @@ function tfToSec(tf: string): number {
 /* ---------- backtest ---------- */
 
 export type Trade = {
+  side: "BUY" | "SELL";
   entryTime: number;
   entryPrice: number;
   exitTime: number;
@@ -175,7 +176,7 @@ export type Trade = {
   qty: number;
   notional: number;
   stop: number;
-  exitReason: "Strategy SELL" | "STOP_LOSS" | "Otwarta";
+  exitReason: "Strategy SELL" | "Strategy BUY" | "STOP_LOSS" | "Otwarta";
   pnl: number;
   pnlPct: number;
   commission: number;
@@ -216,6 +217,13 @@ export type StrategyResult = {
     avgBars: number;
     stopExits: number;
     signalExits: number;
+    /** Końcowe saldo portfela USDC. */
+    usdcBalance: number;
+    /** Końcowe saldo portfeli w SUI (sztuki i wartość w USDC po ostatniej cenie). */
+    suiBalance: number;
+    suiValueUsdc: number;
+    /** Suma obu portfeli w USDC. */
+    totalUsdc: number;
   };
 };
 
@@ -310,6 +318,8 @@ export function runJarvis(
   let cash = header.initialCapital;
   let pos: { qty: number; entryPrice: number; entryIdx: number; stop: number; notional: number; comm: number } | null =
     null;
+  // Short: full capital swapped USDC->SUI->sold; profit when price falls.
+  let short: { qty: number; entryPrice: number; entryIdx: number; notional: number; comm: number } | null = null;
   let intrabarPeak = header.initialCapital;
   let maxIntrabarDrawdownPct = 0;
   const markIntrabar = (value: number) => {
@@ -324,6 +334,7 @@ export function runJarvis(
     const pnl = pos.qty * (px - pos.entryPrice) - pos.comm - exitComm;
     cash += pos.qty * px - exitComm;
     trades.push({
+      side: "BUY",
       entryTime: time[pos.entryIdx],
       entryPrice: pos.entryPrice,
       exitTime: time[i],
@@ -350,6 +361,10 @@ export function runJarvis(
       markIntrabar(cash + pos.qty * c.high);
       const worstPrice = stopArmed && c.low <= pos.stop ? Math.min(c.open, pos.stop) : c.low;
       markIntrabar(cash + pos.qty * worstPrice);
+    }
+    if (short) {
+      // Worst case for a short inside the candle is the high.
+      markIntrabar(cash + short.notional + short.qty * (short.entryPrice - c.high));
     }
     // 1) intrabar stop from order placed on previous bar
     if (pos && stopArmed && c.low <= pos.stop) {
@@ -378,10 +393,35 @@ export function runJarvis(
     const sellC =
       valid && hma1[i] < hma2[i] && D1[i] < D2[i] && macd[i] < aMacd[i] && price[i] < hma2[i] && lead1[i] < lead2[i];
 
+    if (short) {
+      // Short is closed (SUI bought back with all proceeds) on the BUY signal.
+      if (longC) {
+        const px = close[i];
+        const buyBackComm = short.qty * px * comm;
+        const pnl = short.qty * (short.entryPrice - px) - short.comm - buyBackComm;
+        cash += short.notional + short.qty * (short.entryPrice - px) - buyBackComm;
+        trades.push({
+          side: "SELL",
+          entryTime: time[short.entryIdx],
+          entryPrice: short.entryPrice,
+          exitTime: time[i],
+          exitPrice: px,
+          qty: short.qty,
+          notional: short.notional,
+          stop: NaN,
+          exitReason: "Strategy BUY",
+          pnl,
+          pnlPct: (pnl / short.notional) * 100,
+          commission: short.comm + buyBackComm,
+          bars: i - short.entryIdx,
+        });
+        short = null;
+      }
+    }
     if (pos) {
       if (sellC) closePos(i, close[i], "Strategy SELL");
       else stopArmed = true;
-    } else if (longC) {
+    } else if (longC && !short) {
       const entry = close[i];
       const cs = candStop[i];
       // Use all available spot cash, including the BUY commission.
@@ -395,12 +435,24 @@ export function runJarvis(
         pos = { qty, entryPrice: entry, entryIdx: i, stop: cs, notional: finalNotional, comm: entryComm };
         stopArmed = false;
       }
+    } else if (sellC && !short && !pos) {
+      // SELL entry: swap the whole USDC portfolio to SUI, sell it all at once.
+      const entry = close[i];
+      const finalNotional = Math.max(cash, 0) / (1 + comm);
+      const qty = entry > 0 ? finalNotional / entry : 0;
+      if (finalNotional > 0 && qty > 0) {
+        const entryComm = finalNotional * comm;
+        cash -= finalNotional + entryComm;
+        if (Math.abs(cash) < 1e-10) cash = 0;
+        short = { qty, entryPrice: entry, entryIdx: i, notional: finalNotional, comm: entryComm };
+      }
     }
 
     // Linia SL dobija do świecy zamknięcia pozycji (SL lub SELL)
     const plotStop = pos ? pos.stop : barStartStop;
     stopPlot.push(plotStop !== null ? { time: time[i], value: plotStop } : ({ time: time[i] } as { time: number; value: number }));
-    const accountEquity = cash + (pos ? pos.qty * close[i] : 0);
+    const accountEquity = cash + (pos ? pos.qty * close[i] : 0) +
+      (short ? short.notional + short.qty * (short.entryPrice - close[i]) : 0);
     markIntrabar(accountEquity);
     equity.push({ time: time[i], value: accountEquity });
   }
@@ -410,6 +462,7 @@ export function runJarvis(
     const px = close[n - 1];
     const pnl = p0.qty * (px - p0.entryPrice) - p0.comm;
     trades.push({
+      side: "BUY",
       entryTime: time[p0.entryIdx],
       entryPrice: p0.entryPrice,
       exitTime: time[n - 1],
@@ -422,6 +475,27 @@ export function runJarvis(
       pnlPct: (pnl / p0.notional) * 100,
       commission: p0.comm,
       bars: n - 1 - p0.entryIdx,
+    });
+  }
+
+  if (short) {
+    const s0 = short;
+    const px = close[n - 1];
+    const pnl = s0.qty * (s0.entryPrice - px) - s0.comm;
+    trades.push({
+      side: "SELL",
+      entryTime: time[s0.entryIdx],
+      entryPrice: s0.entryPrice,
+      exitTime: time[n - 1],
+      exitPrice: px,
+      qty: s0.qty,
+      notional: s0.notional,
+      stop: NaN,
+      exitReason: "Otwarta",
+      pnl,
+      pnlPct: (pnl / s0.notional) * 100,
+      commission: s0.comm,
+      bars: n - 1 - s0.entryIdx,
     });
   }
 
@@ -501,6 +575,11 @@ export function runJarvis(
       avgBars: closed.length ? closed.reduce((a, t) => a + t.bars, 0) / closed.length : 0,
       stopExits: closed.filter((t) => t.exitReason === "STOP_LOSS").length,
       signalExits: closed.filter((t) => t.exitReason === "Strategy SELL").length,
+      // Podział na dwa portfele po ostatniej świecy: SUI (otwarty BUY) albo USDC.
+      usdcBalance: pos ? cash : short ? cash + short.notional + short.qty * (short.entryPrice - close[n - 1]) : cash,
+      suiBalance: pos ? pos.qty : 0,
+      suiValueUsdc: pos ? pos.qty * close[n - 1] : 0,
+      totalUsdc: finalEquity,
     },
   };
 }
