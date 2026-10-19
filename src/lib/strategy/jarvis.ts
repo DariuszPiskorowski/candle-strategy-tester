@@ -316,7 +316,9 @@ export function runJarvis(
 
   const trades: Trade[] = [];
   const equity: { time: number; value: number }[] = [];
-  const stopPlot: { time: number; value: number }[] = [];
+  // Osobne serie SL dla pozycji BUY (pod ceną) i SELL (nad ceną) — nigdy nie łączą się w jedną linię.
+  const stopLongPlot: { time: number; value: number }[] = [];
+  const stopShortPlot: { time: number; value: number }[] = [];
   let cash = header.initialCapital;
   let pos: { qty: number; entryPrice: number; entryIdx: number; stop: number; notional: number; comm: number } | null =
     null;
@@ -383,6 +385,7 @@ export function runJarvis(
     const c = candles[i];
     if (options.startTime !== undefined && c.time < options.startTime) continue;
     const barStartStop: number | null = pos ? pos.stop : short ? short.stop : null;
+    const barStartSide: "long" | "short" | null = pos ? "long" : short ? "short" : null;
     if (pos) {
       // Conservative bound, not a reconstruction of the true high/low sequence.
       markIntrabar(cash + pos.qty * c.high);
@@ -465,9 +468,13 @@ export function runJarvis(
       }
     }
 
-    // Linia SL dobija do świecy zamknięcia pozycji (SL lub SELL)
-    const plotStop = pos ? pos.stop : short ? short.stop : barStartStop;
-    stopPlot.push(plotStop !== null ? { time: time[i], value: plotStop } : ({ time: time[i] } as { time: number; value: number }));
+    // Linia SL dobija do świecy zamknięcia pozycji (SL lub SELL); BUY i SELL mają osobne serie.
+    const longStopValue = pos ? pos.stop : barStartSide === "long" ? barStartStop : null;
+    const shortStopValue = short ? short.stop : barStartSide === "short" ? barStartStop : null;
+    const pushStop = (arr: { time: number; value: number }[], v: number | null) =>
+      arr.push(v !== null ? { time: time[i], value: v } : ({ time: time[i] } as { time: number; value: number }));
+    pushStop(stopLongPlot, longStopValue);
+    pushStop(stopShortPlot, shortStopValue);
     const accountEquity = cash + (pos ? pos.qty * close[i] : 0) +
       (short ? short.notional + short.qty * (short.entryPrice - close[i]) : 0);
     markIntrabar(accountEquity);
@@ -535,7 +542,8 @@ export function runJarvis(
     { title: "Lagging Span", color: color("lagging"), width: 1, data: toLine(price, -disp) },
     { title: "Lead 1", color: color("lead1"), width: 1, data: toLine(lead1, disp) },
     { title: "Lead 2", color: color("lead2"), width: 1, data: toLine(lead2, disp) },
-    { title: "Jarvis Stop Loss", color: color("stop"), width: 2, data: stopPlot },
+    { title: "Jarvis Stop Loss (BUY)", color: color("stop"), width: 2, data: stopLongPlot },
+    { title: "Jarvis Stop Loss (SELL)", color: color("stop"), width: 2, data: stopShortPlot },
   ];
 
   /* stats */
