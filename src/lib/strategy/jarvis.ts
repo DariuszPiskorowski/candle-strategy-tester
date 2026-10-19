@@ -1,5 +1,5 @@
 import type { Candle } from "@/lib/candles";
-import { indicatorSignal, type IndicatorSignal } from "./signals";
+import { indicatorSignal, type IndicatorSignal } from "./signals.ts";
 
 /* ---------- Pine source helpers ---------- */
 
