@@ -355,6 +355,30 @@ export function runJarvis(
     stopArmed = false;
   };
 
+  const closeShort = (i: number, px: number, reason: Trade["exitReason"]) => {
+    if (!short) return;
+    const buyBackComm = short.qty * px * comm;
+    const pnl = short.qty * (short.entryPrice - px) - short.comm - buyBackComm;
+    cash += short.notional + short.qty * (short.entryPrice - px) - buyBackComm;
+    trades.push({
+      side: "SELL",
+      entryTime: time[short.entryIdx],
+      entryPrice: short.entryPrice,
+      exitTime: time[i],
+      exitPrice: px,
+      qty: short.qty,
+      notional: short.notional,
+      stop: short.stop,
+      exitReason: reason,
+      pnl,
+      pnlPct: (pnl / short.notional) * 100,
+      commission: short.comm + buyBackComm,
+      bars: i - short.entryIdx,
+    });
+    short = null;
+    shortStopArmed = false;
+  };
+
   for (let i = 0; i < n; i++) {
     const c = candles[i];
     if (options.startTime !== undefined && c.time < options.startTime) continue;
