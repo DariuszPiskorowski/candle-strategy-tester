@@ -467,9 +467,14 @@ export function runJarvis(
       }
     }
 
-    // Linia SL dobija do świecy zamknięcia pozycji (SL lub SELL)
-    const plotStop = pos ? pos.stop : short ? short.stop : barStartStop;
-    stopPlot.push(plotStop !== null ? { time: time[i], value: plotStop } : ({ time: time[i] } as { time: number; value: number }));
+    // Linia SL dobija do świecy zamknięcia pozycji (SL lub SELL); BUY i SELL mają osobne serie.
+    const barStartSide = barStartStop !== null ? (posAtBarStart ? "long" : "short") : null;
+    const longStopValue = pos ? pos.stop : barStartSide === "long" ? barStartStop : null;
+    const shortStopValue = short ? short.stop : barStartSide === "short" ? barStartStop : null;
+    const pushStop = (arr: { time: number; value: number }[], v: number | null) =>
+      arr.push(v !== null ? { time: time[i], value: v } : ({ time: time[i] } as { time: number; value: number }));
+    pushStop(stopLongPlot, longStopValue);
+    pushStop(stopShortPlot, shortStopValue);
     const accountEquity = cash + (pos ? pos.qty * close[i] : 0) +
       (short ? short.notional + short.qty * (short.entryPrice - close[i]) : 0);
     markIntrabar(accountEquity);
