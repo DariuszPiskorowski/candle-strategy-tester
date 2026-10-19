@@ -102,7 +102,7 @@ export function StrategyPanel({ header, params, onParams, colors, onColors, resu
               ["DD — ostrożna granica OHLC", `${fmt(s.maxIntrabarDrawdownPct)}%`, -1],
               ["Prowizje", `${fmt(s.commission)} USD`],
               ["Portfel USDC", `${fmt(s.usdcBalance)} USD`],
-              ["Portfel SUI", `${fmt(s.suiBalance, 4)} SUI (${fmt(s.suiValueUsdc)} USD)`],
+              ["Portfel SUI", `${fmt(s.suiBalance, 4)} SUI`],
               ["Razem w USDC", `${fmt(s.totalUsdc)} USD`, s.totalUsdc - s.initialCapital],
               ["Śr. długość", `${fmt(s.avgBars, 1)} świec`],
               ["Wyjścia SELL / SL", `${s.signalExits} / ${s.stopExits}`],
