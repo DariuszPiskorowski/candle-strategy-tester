@@ -86,6 +86,10 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
         autoSize: true,
       });
 
+      // Wykres rysuje czas w strefie przeglądarki; przesunięcie znaczników czasu
+      // o offset strefy sprawia, że oś pokazuje czas UTC, tak jak Binance.
+      const tzShift = new Date().getTimezoneOffset() * 60;
+      const sh = (t: number) => (t + tzShift) as typeof t;
       const up = "#26a69a";
       const down = "#ef5350";
       const dec = pricePrecision(candles);
@@ -104,10 +108,10 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           wickUpColor: up,
           wickDownColor: down,
         });
-        main.setData((candles) as any);
+        main.setData(candles.map((c) => ({ ...c, time: sh(c.time) })) as any);
       } else if (chartType === "bars") {
         main = chart.addSeries(lc.BarSeries, { priceFormat, upColor: up, downColor: down });
-        main.setData((candles) as any);
+        main.setData(candles.map((c) => ({ ...c, time: sh(c.time) })) as any);
       } else if (chartType === "area") {
         main = chart.addSeries(lc.AreaSeries, {
           priceFormat,
@@ -116,10 +120,10 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           bottomColor: "rgba(41,98,255,0.02)",
           lineWidth: 2,
         });
-        main.setData((candles.map((c) => ({ time: c.time, value: c.close }))) as any);
+        main.setData(candles.map((c) => ({ time: sh(c.time), value: c.close })) as any);
       } else {
         main = chart.addSeries(lc.LineSeries, { priceFormat, color: "#2962ff", lineWidth: 2 });
-        main.setData((candles.map((c) => ({ time: c.time, value: c.close }))) as any);
+        main.setData(candles.map((c) => ({ time: sh(c.time), value: c.close })) as any);
       }
 
       if (indicators.volume) {
@@ -130,7 +134,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
         );
         vol.setData(
           candles.map((c) => ({
-            time: c.time,
+            time: sh(c.time),
             value: c.volume,
             color: c.close >= c.open ? "rgba(38,166,154,0.4)" : "rgba(239,83,80,0.4)",
           })) as any,
@@ -150,7 +154,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           },
           pane,
         );
-        s.setData((data) as any);
+        s.setData(data.map((point) => ({ ...point, time: sh(point.time) })) as any);
         return s;
       };
 
@@ -179,7 +183,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
       if (indicators.macd.on) {
         const m = macd(candles, indicators.macd.fast, indicators.macd.slow, indicators.macd.signal);
         const hist = chart.addSeries(lc.HistogramSeries, { priceLineVisible: false }, pane);
-        hist.setData((m.histogram) as any);
+        hist.setData(m.histogram.map((point) => ({ ...point, time: sh(point.time) })) as any);
         addLine(m.macdLine, "#2962ff", pane, 1);
         addLine(m.signalLine, "#ff9800", pane, 1);
         chart.panes()[pane]?.setHeight(120);
@@ -190,6 +194,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
         if (showPlots) for (const pl of strategy.plots) if (pl.data.length) addLine(pl.data, pl.color, 0, pl.width);
         const markers = strategy.trades
           .flatMap((t) => [
+
             t.side === "SELL"
               ? {
                   time: t.entryTime,
@@ -217,7 +222,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
                         color: t.pnl >= 0 ? up : down,
                         shape: "arrowUp" as const,
                         size: 1.5,
-                        text: `BUY ${t.pnlPct >= 0 ? "+" : ""}${t.pnlPct.toFixed(2)}%`,
+                        text: `${t.exitReason === "STOP_LOSS" ? "SL" : "BUY"} ${t.pnlPct >= 0 ? "+" : ""}${t.pnlPct.toFixed(2)}%`,
                       }
                     : {
                         time: t.exitTime,
@@ -230,7 +235,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
                 ]),
           ])
           .sort((a, b) => a.time - b.time);
-        lc.createSeriesMarkers(main, markers as any);
+        lc.createSeriesMarkers(main, markers.map((m) => ({ ...m, time: sh(m.time) })) as any);
         for (const t of strategy.trades) {
           if (t.exitReason === "Otwarta") continue;
           const seg = chart.addSeries(
@@ -248,8 +253,8 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
             0,
           );
           seg.setData([
-            { time: t.entryTime, value: t.entryPrice },
-            { time: t.exitTime, value: t.exitPrice },
+            { time: sh(t.entryTime), value: t.entryPrice },
+            { time: sh(t.exitTime), value: t.exitPrice },
           ] as any);
         }
         const eq = chart.addSeries(
@@ -264,7 +269,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           },
           pane,
         );
-        eq.setData(strategy.equity as any);
+        eq.setData(strategy.equity.map((point) => ({ ...point, time: sh(point.time) })) as any);
         chart.panes()[pane]?.setHeight(130);
         pane++;
       }
@@ -274,7 +279,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           hoverRef.current?.(null);
           return;
         }
-        const found = candles.find((c) => c.time === param.time);
+        const found = candles.find((c) => sh(c.time) === param.time);
         hoverRef.current?.(found ?? null);
       });
 

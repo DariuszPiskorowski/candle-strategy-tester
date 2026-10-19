@@ -63,3 +63,26 @@ test('SELL otwiera sie przy sygnale sprzedazy i zarabia na spadku ceny',()=> {
     }
   }
 });
+
+test('SELL ma stop loss na swing high i zamyka sie nim, gdy cena rosnie',()=> {
+  const r=runJarvis(candles,params,header);
+  const shorts=r.trades.filter(t=>t.side==='SELL');
+  assert.ok(shorts.length>0,'fixture must exercise SELL entries');
+  for(const t of shorts) {
+    assert.ok(Number.isFinite(t.stop),'kazdy SELL musi miec SL');
+    assert.ok(t.stop>t.entryPrice,'SL pozycji SELL musi byc powyzej ceny wejscia');
+  }
+  const stopped=shorts.filter(t=>t.exitReason==='STOP_LOSS');
+  for(const t of stopped) assert.ok(t.exitPrice>=t.entryPrice,'SL SELL zamyka sie strata po wzroscie ceny');
+});
+
+test('sygnal SELL zamykajacy BUY otwiera shorta na tej samej swiecy',()=> {
+  const r=runJarvis(candles,params,header);
+  const longs=r.trades.filter(t=>t.side==='BUY'&&t.exitReason==='Strategy SELL');
+  assert.ok(longs.length>0,'fixture must exercise signal exits of BUY');
+  for(const t of longs) {
+    const opened=r.trades.find(s=>s.side==='SELL'&&s.entryTime===t.exitTime);
+    assert.ok(opened,`brak SELL otwartego przy zamknieciu BUY na swiecy ${t.exitTime}`);
+    assert.equal(opened.entryPrice,t.exitPrice);
+  }
+});
