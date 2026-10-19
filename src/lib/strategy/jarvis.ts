@@ -542,7 +542,8 @@ export function runJarvis(
     { title: "Lagging Span", color: color("lagging"), width: 1, data: toLine(price, -disp) },
     { title: "Lead 1", color: color("lead1"), width: 1, data: toLine(lead1, disp) },
     { title: "Lead 2", color: color("lead2"), width: 1, data: toLine(lead2, disp) },
-    { title: "Jarvis Stop Loss", color: color("stop"), width: 2, data: stopPlot },
+    { title: "Jarvis Stop Loss (BUY)", color: color("stop"), width: 2, data: stopLongPlot },
+    { title: "Jarvis Stop Loss (SELL)", color: color("stop"), width: 2, data: stopShortPlot },
   ];
 
   /* stats */
