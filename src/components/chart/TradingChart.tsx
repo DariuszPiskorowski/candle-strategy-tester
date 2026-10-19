@@ -83,6 +83,9 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           horzLine: { color: crosshair, labelBackgroundColor: crosshairLabel },
         },
         localization: { locale: "pl-PL" },
+        // Wykres wyświetla czas lokalny przeglądarki; przesuwamy znaczniki czasu,
+        // żeby oś pokazywała czas UTC tak jak Binance.
+        timeScale: { borderColor: axis, timeVisible: true, secondsVisible: false, rightOffset: 6 },
         autoSize: true,
       });
 
