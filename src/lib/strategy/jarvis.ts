@@ -575,6 +575,11 @@ export function runJarvis(
       avgBars: closed.length ? closed.reduce((a, t) => a + t.bars, 0) / closed.length : 0,
       stopExits: closed.filter((t) => t.exitReason === "STOP_LOSS").length,
       signalExits: closed.filter((t) => t.exitReason === "Strategy SELL").length,
+      // Podział na dwa portfele po ostatniej świecy: SUI (otwarty BUY) albo USDC.
+      usdcBalance: pos ? cash : short ? cash + short.notional + short.qty * (short.entryPrice - close[n - 1]) : cash,
+      suiBalance: pos ? pos.qty : 0,
+      suiValueUsdc: pos ? pos.qty * close[n - 1] : 0,
+      totalUsdc: finalEquity,
     },
   };
 }
