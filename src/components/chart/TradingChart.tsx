@@ -120,10 +120,10 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           bottomColor: "rgba(41,98,255,0.02)",
           lineWidth: 2,
         });
-        main.setData((candles.map((c) => ({ time: c.time, value: c.close }))) as any);
+        main.setData(candles.map((c) => ({ time: sh(c.time), value: c.close })) as any);
       } else {
         main = chart.addSeries(lc.LineSeries, { priceFormat, color: "#2962ff", lineWidth: 2 });
-        main.setData((candles.map((c) => ({ time: c.time, value: c.close }))) as any);
+        main.setData(candles.map((c) => ({ time: sh(c.time), value: c.close })) as any);
       }
 
       if (indicators.volume) {
@@ -134,7 +134,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
         );
         vol.setData(
           candles.map((c) => ({
-            time: c.time,
+            time: sh(c.time),
             value: c.volume,
             color: c.close >= c.open ? "rgba(38,166,154,0.4)" : "rgba(239,83,80,0.4)",
           })) as any,
@@ -154,7 +154,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           },
           pane,
         );
-        s.setData((data) as any);
+        s.setData(data.map((point) => ({ ...point, time: sh(point.time) })) as any);
         return s;
       };
 
