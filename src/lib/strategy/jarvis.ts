@@ -168,6 +168,7 @@ function tfToSec(tf: string): number {
 /* ---------- backtest ---------- */
 
 export type Trade = {
+  side: "BUY" | "SELL";
   entryTime: number;
   entryPrice: number;
   exitTime: number;
@@ -175,7 +176,7 @@ export type Trade = {
   qty: number;
   notional: number;
   stop: number;
-  exitReason: "Strategy SELL" | "STOP_LOSS" | "Otwarta";
+  exitReason: "Strategy SELL" | "Strategy BUY" | "STOP_LOSS" | "Otwarta";
   pnl: number;
   pnlPct: number;
   commission: number;
