@@ -26,6 +26,22 @@ test('Tylko BUY wylaczone pozwala na BUY i SELL tak jak dotychczas',()=> {
   assert.deepEqual(r,runJarvis(candles,params,header));
 });
 
+test('Tylko SELL wlaczone blokuje wejscia BUY, ale zachowuje zamkniecia SELL sygnalem BUY i SL',()=> {
+  const r=runJarvis(candles,{...params,onlySell:true},header);
+  assert.ok(r.trades.length>0,'fixture must exercise SELL entries');
+  assert.ok(r.trades.every(t=>t.side==='SELL'));
+  const closed=r.trades.filter(t=>t.exitReason!=='Otwarta');
+  assert.ok(closed.length>0,'fixture must exercise closed SELL positions');
+});
+
+test('Tylko SELL wylaczone pozwala na BUY i SELL tak jak dotychczas',()=> {
+  const a=runJarvis(candles,params,header);
+  assert.ok(a.trades.some(t=>t.side==='BUY'));
+  assert.ok(a.trades.some(t=>t.side==='SELL'));
+  assert.deepEqual(a,runJarvis(candles,{...params,onlySell:false},header));
+});
+
+
 test('every entry spends the available spot balance including BUY fee',()=> {
   const r=runJarvis(candles,params,header);
   assert.ok(r.trades.length>2,'fixture must exercise multiple entries and exits');
