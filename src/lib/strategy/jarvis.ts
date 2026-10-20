@@ -246,6 +246,7 @@ export function runJarvis(
   const num = (k: string, d: number) => (typeof p[k] === "number" ? (p[k] as number) : d);
   const bool = (k: string, d: boolean) => (typeof p[k] === "boolean" ? (p[k] as boolean) : d);
   const onlyBuy = bool("onlyBuy", false);
+  const onlySell = bool("onlySell", false);
   const useSidewaysFilter = bool("useSidewaysFilter", false);
   const sLook = Math.max(2, Math.round(num("sidewaysLookback", 6)));
   const sMaxRange = num("sidewaysMaxRangePct", 3) / 100;
@@ -440,7 +441,7 @@ export function runJarvis(
     // Entries are checked after closes, so a SELL signal that closes a BUY
     // opens the short on the very same bar (and vice versa).
     if (!pos && !short) {
-      if (longC) {
+      if (longC && !onlySell) {
         const entry = close[i];
         const cs = candStop[i];
         // Use all available spot cash, including the BUY commission.

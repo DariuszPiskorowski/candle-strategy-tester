@@ -6,6 +6,7 @@ strategy("Ichimoku + Daily + HULL-MA + Hull-MACD + Jarvis RM + Sideways Filter",
 // =====================================================
 
 onlyBuy = input.bool(false, title="Tylko BUY")
+onlySell = input.bool(false, title="Tylko SELL")
 period = input.int(5, minval=1, title="Double HullMA X Period")
 res = input.timeframe("D", title="Higher Timeframe Resolution")
 price = input.source(close, title="Source of Price")
