@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type { Candle } from "@/lib/candles";
 import { bollinger, ema, macd, rsi, sma } from "@/lib/indicators";
 import type { StrategyResult } from "@/lib/strategy/jarvis";
+import { stopSegments } from "./stop-segments";
 
 // precyzja ceny z danych: tyle miejsc po przecinku, ile najwyżej ma któraś świeca (min. 2, maks. 8)
 function pricePrecision(cs: Candle[]): number {
@@ -191,7 +192,19 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
       }
 
       if (strategy) {
-        if (showPlots) for (const pl of strategy.plots) if (pl.data.length) addLine(pl.data, pl.color, 0, pl.width);
+        if (showPlots) for (const pl of strategy.plots) {
+          if (!pl.data.length) continue;
+          if (pl.title.startsWith("Jarvis Stop Loss")) {
+            const side = pl.title.endsWith("(SELL)") ? "SELL" : "BUY";
+            const entries = strategy.trades.filter((t) => t.side === side).map((t) => t.entryTime);
+            for (const segment of stopSegments(pl.data, entries)) {
+              const line = addLine(segment, pl.color, 0, pl.width);
+              line.applyOptions({ crosshairMarkerVisible: false, pointMarkersVisible: segment.length === 1, pointMarkersRadius: 1 });
+            }
+          } else {
+            addLine(pl.data, pl.color, 0, pl.width);
+          }
+        }
         const markers = strategy.trades
           .flatMap((t) => [
 
