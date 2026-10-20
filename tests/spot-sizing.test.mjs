@@ -11,6 +11,21 @@ const candles = Array.from({length:360},(_,i)=> {
 const params={period:5,res:'D',swingLookback:5,swingBuffer:0.35,useSidewaysFilter:false,conversionPeriod:8,basePeriod:25,laggingSpanPeriod:11,macdLength:9,macdFastLength:13,macdSlowLength:27};
 const header={title:'Test',initialCapital:300,commissionPct:0.25};
 
+test('Tylko BUY wlaczone blokuje wejscia SELL, ale zachowuje zamkniecia BUY sygnalem SELL i SL',()=> {
+  const r=runJarvis(candles,{...params,onlyBuy:true},header);
+  assert.ok(r.trades.length>0,'fixture must exercise BUY entries');
+  assert.ok(r.trades.every(t=>t.side==='BUY'));
+  assert.ok(r.trades.some(t=>t.exitReason==='Strategy SELL'));
+  assert.ok(r.trades.some(t=>t.exitReason==='STOP_LOSS'));
+});
+
+test('Tylko BUY wylaczone pozwala na BUY i SELL tak jak dotychczas',()=> {
+  const r=runJarvis(candles,{...params,onlyBuy:false},header);
+  assert.ok(r.trades.some(t=>t.side==='BUY'));
+  assert.ok(r.trades.some(t=>t.side==='SELL'));
+  assert.deepEqual(r,runJarvis(candles,params,header));
+});
+
 test('every entry spends the available spot balance including BUY fee',()=> {
   const r=runJarvis(candles,params,header);
   assert.ok(r.trades.length>2,'fixture must exercise multiple entries and exits');

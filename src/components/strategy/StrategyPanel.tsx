@@ -29,7 +29,7 @@ export function StrategyPanel({ header, params, onParams, colors, onColors, resu
     <div className="space-y-2">
       <div className="text-xs font-semibold">{header.title}</div>
       <div className="text-[11px] text-muted-foreground">
-        Kapitał {header.initialCapital} USDC · prowizja {header.commissionPct}% · spot 100% · BUY i SELL
+        Kapitał {header.initialCapital} USDC · prowizja {header.commissionPct}% · spot 100% · {params.some((p) => p.name === "onlyBuy" && p.value === true) ? "tylko BUY" : "BUY i SELL"}
       </div>
       {result && onPdf && (
         <button
