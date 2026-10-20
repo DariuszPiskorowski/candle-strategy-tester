@@ -245,6 +245,7 @@ export function runJarvis(
   const n = candles.length;
   const num = (k: string, d: number) => (typeof p[k] === "number" ? (p[k] as number) : d);
   const bool = (k: string, d: boolean) => (typeof p[k] === "boolean" ? (p[k] as boolean) : d);
+  const onlyBuy = bool("onlyBuy", false);
   const useSidewaysFilter = bool("useSidewaysFilter", false);
   const sLook = Math.max(2, Math.round(num("sidewaysLookback", 6)));
   const sMaxRange = num("sidewaysMaxRangePct", 3) / 100;
@@ -453,7 +454,7 @@ export function runJarvis(
           pos = { qty, entryPrice: entry, entryIdx: i, stop: cs, notional: finalNotional, comm: entryComm };
           stopArmed = false;
         }
-      } else if (sellC) {
+      } else if (sellC && !onlyBuy) {
         // SELL entry: swap the whole USDC portfolio to SUI, sell it all at once.
         const entry = close[i];
         const cs = candStopShort[i];
