@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Charting
+- Chart labels use an explicit Dublin formatter on unchanged exchange timestamps, because shifting data corrupts timezone display and fixed offsets ignore daylight saving.
 - Candle parsing/indicators/backtest live in src/lib (candles.ts, indicators.ts, backtest.ts); the chart renders client-only via dynamic `lightweight-charts` import in src/components/chart, because the library touches the DOM and cannot run during SSR.
 - tsconfig: noUncheckedIndexedAccess and noPropertyAccessFromIndexSignature are off — the candle/indicator math uses a lot of array indexing and dynamic keys, and those checks only added noise.
 - Strategy plot colors are parsed and stored separately from Pine calculation inputs, because visual changes must not alter backtest results.
