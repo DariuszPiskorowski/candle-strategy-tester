@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
+import type { Time, TickMarkType } from "lightweight-charts";
 import type { Candle } from "@/lib/candles";
 import { bollinger, ema, macd, rsi, sma } from "@/lib/indicators";
 import type { StrategyResult } from "@/lib/strategy/jarvis";
 import { stopSegments } from "./stop-segments";
+import { formatChartTime } from "@/lib/chart-time";
 
 // precyzja ceny z danych: tyle miejsc po przecinku, ile najwyżej ma któraś świeca (min. 2, maks. 8)
 function pricePrecision(cs: Candle[]): number {
@@ -77,20 +79,18 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           timeVisible: true,
           secondsVisible: false,
           rightOffset: 6,
+          tickMarkFormatter: (time: Time, type: TickMarkType) => formatChartTime(time, type),
         },
         crosshair: {
           mode: lc.CrosshairMode.Normal,
           vertLine: { color: crosshair, labelBackgroundColor: crosshairLabel },
           horzLine: { color: crosshair, labelBackgroundColor: crosshairLabel },
         },
-        localization: { locale: "pl-PL" },
+        localization: { locale: "pl-PL", timeFormatter: (time: Time) => formatChartTime(time) },
         autoSize: true,
       });
 
-      // Wykres rysuje czas w strefie przeglądarki; przesunięcie znaczników czasu
-      // o offset strefy sprawia, że oś pokazuje czas UTC, tak jak Binance.
-      const tzShift = new Date().getTimezoneOffset() * 60;
-      const sh = (t: number) => (t + tzShift) as typeof t;
+      // Exchange timestamps stay unchanged; only labels use Dublin time.
       const up = "#26a69a";
       const down = "#ef5350";
       const dec = pricePrecision(candles);
@@ -109,10 +109,10 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           wickUpColor: up,
           wickDownColor: down,
         });
-        main.setData(candles.map((c) => ({ ...c, time: sh(c.time) })) as any);
+        main.setData(candles.map((c) => ({ ...c, time: c.time })) as any);
       } else if (chartType === "bars") {
         main = chart.addSeries(lc.BarSeries, { priceFormat, upColor: up, downColor: down });
-        main.setData(candles.map((c) => ({ ...c, time: sh(c.time) })) as any);
+        main.setData(candles.map((c) => ({ ...c, time: c.time })) as any);
       } else if (chartType === "area") {
         main = chart.addSeries(lc.AreaSeries, {
           priceFormat,
@@ -121,10 +121,10 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           bottomColor: "rgba(41,98,255,0.02)",
           lineWidth: 2,
         });
-        main.setData(candles.map((c) => ({ time: sh(c.time), value: c.close })) as any);
+        main.setData(candles.map((c) => ({ time: c.time, value: c.close })) as any);
       } else {
         main = chart.addSeries(lc.LineSeries, { priceFormat, color: "#2962ff", lineWidth: 2 });
-        main.setData(candles.map((c) => ({ time: sh(c.time), value: c.close })) as any);
+        main.setData(candles.map((c) => ({ time: c.time, value: c.close })) as any);
       }
 
       if (indicators.volume) {
@@ -135,7 +135,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
         );
         vol.setData(
           candles.map((c) => ({
-            time: sh(c.time),
+            time: c.time,
             value: c.volume,
             color: c.close >= c.open ? "rgba(38,166,154,0.4)" : "rgba(239,83,80,0.4)",
           })) as any,
@@ -155,7 +155,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           },
           pane,
         );
-        s.setData(data.map((point) => ({ ...point, time: sh(point.time) })) as any);
+        s.setData(data.map((point) => ({ ...point, time: point.time })) as any);
         return s;
       };
 
@@ -184,7 +184,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
       if (indicators.macd.on) {
         const m = macd(candles, indicators.macd.fast, indicators.macd.slow, indicators.macd.signal);
         const hist = chart.addSeries(lc.HistogramSeries, { priceLineVisible: false }, pane);
-        hist.setData(m.histogram.map((point) => ({ ...point, time: sh(point.time) })) as any);
+        hist.setData(m.histogram.map((point) => ({ ...point, time: point.time })) as any);
         addLine(m.macdLine, "#2962ff", pane, 1);
         addLine(m.signalLine, "#ff9800", pane, 1);
         chart.panes()[pane]?.setHeight(120);
@@ -248,7 +248,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
                 ]),
           ])
           .sort((a, b) => a.time - b.time);
-        lc.createSeriesMarkers(main, markers.map((m) => ({ ...m, time: sh(m.time) })) as any);
+        lc.createSeriesMarkers(main, markers.map((m) => ({ ...m, time: m.time })) as any);
         for (const t of strategy.trades) {
           if (t.exitReason === "Otwarta") continue;
           const seg = chart.addSeries(
@@ -266,8 +266,8 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
             0,
           );
           seg.setData([
-            { time: sh(t.entryTime), value: t.entryPrice },
-            { time: sh(t.exitTime), value: t.exitPrice },
+            { time: t.entryTime, value: t.entryPrice },
+            { time: t.exitTime, value: t.exitPrice },
           ] as any);
         }
         const eq = chart.addSeries(
@@ -282,7 +282,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           },
           pane,
         );
-        eq.setData(strategy.equity.map((point) => ({ ...point, time: sh(point.time) })) as any);
+        eq.setData(strategy.equity.map((point) => ({ ...point, time: point.time })) as any);
         chart.panes()[pane]?.setHeight(130);
         pane++;
       }
@@ -292,7 +292,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           hoverRef.current?.(null);
           return;
         }
-        const found = candles.find((c) => sh(c.time) === param.time);
+        const found = candles.find((c) => c.time === param.time);
         hoverRef.current?.(found ?? null);
       });
 
