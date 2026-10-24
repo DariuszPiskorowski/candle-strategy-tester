@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import type { Time, TickMarkType } from "lightweight-charts";
 import type { Candle } from "@/lib/candles";
 import { bollinger, ema, macd, rsi, sma } from "@/lib/indicators";
 import type { StrategyResult } from "@/lib/strategy/jarvis";
@@ -78,14 +79,14 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           timeVisible: true,
           secondsVisible: false,
           rightOffset: 6,
-          tickMarkFormatter: (time, type) => formatChartTime(time, type),
+          tickMarkFormatter: (time: Time, type: TickMarkType) => formatChartTime(time, type),
         },
         crosshair: {
           mode: lc.CrosshairMode.Normal,
           vertLine: { color: crosshair, labelBackgroundColor: crosshairLabel },
           horzLine: { color: crosshair, labelBackgroundColor: crosshairLabel },
         },
-        localization: { locale: "pl-PL", timeFormatter: (time) => formatChartTime(time) },
+        localization: { locale: "pl-PL", timeFormatter: (time: Time) => formatChartTime(time) },
         autoSize: true,
       });
 
