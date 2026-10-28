@@ -17,7 +17,7 @@ type Props = {
 const fmt = (v: number, d = 2) =>
   Number.isFinite(v) ? v.toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d }) : "∞";
 const dt = (t: number) =>
-  new Date(t * 1000).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+  new Date(t * 1000).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Dublin", hourCycle: "h23" });
 
 export function StrategyPanel({ header, params, onParams, colors, onColors, result, showPlots, onShowPlots, dec, onPdf }: Props) {
   const [tab, setTab] = useState<"stats" | "trades" | "params">("stats");
