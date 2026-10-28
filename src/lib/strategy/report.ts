@@ -3,7 +3,7 @@ import type { PineHeader, PineInput, StrategyResult } from "./jarvis";
 const fmt = (v: number, d = 2) =>
   Number.isFinite(v) ? v.toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d }) : "∞";
 const dt = (t: number) =>
-  new Date(t * 1000).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  new Date(t * 1000).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Dublin", hourCycle: "h23" });
 
 async function fontB64(url: string) {
   const buf = new Uint8Array(await (await fetch(url)).arrayBuffer());
