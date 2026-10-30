@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { Save } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { PineHeader, PineInput, StrategyColor, StrategyResult } from "@/lib/strategy/jarvis";
 
 type Props = {
   header: PineHeader;
   params: PineInput[];
   onParams: (p: PineInput[]) => void;
+  onSaveParams: () => void;
   colors: StrategyColor[];
   onColors: (colors: StrategyColor[]) => void;
   result: StrategyResult | null;
@@ -19,8 +22,10 @@ const fmt = (v: number, d = 2) =>
 const dt = (t: number) =>
   new Date(t * 1000).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Dublin", hourCycle: "h23" });
 
-export function StrategyPanel({ header, params, onParams, colors, onColors, result, showPlots, onShowPlots, dec, onPdf }: Props) {
+export function StrategyPanel({ header, params, onParams, onSaveParams, colors, onColors, result, showPlots, onShowPlots, dec, onPdf }: Props) {
   const [tab, setTab] = useState<"stats" | "trades" | "params">("stats");
+  const [savedParams, setSavedParams] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   const s = result?.stats;
   const cls = (v: number) => (v >= 0 ? "text-bull" : "text-bear");
@@ -148,6 +153,22 @@ export function StrategyPanel({ header, params, onParams, colors, onColors, resu
 
       {tab === "params" && (
         <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => {
+              try {
+                onSaveParams();
+                setSavedParams(JSON.stringify(params));
+                setSaveError(false);
+              } catch {
+                setSaveError(true);
+              }
+            }}>
+              <Save aria-hidden="true" /> Zapisz
+            </Button>
+            <span role="status" className={`text-[11px] ${saveError ? "text-bear" : "text-muted-foreground"}`}>
+              {saveError ? "Nie udało się zapisać ustawień." : savedParams === JSON.stringify(params) ? "Zapisano" : ""}
+            </span>
+          </div>
           {params.map((p, idx) => (
             <label key={p.name} className="flex items-center gap-2 text-[11px]">
               <span className="min-w-0 flex-1 truncate text-muted-foreground" title={p.title}>
