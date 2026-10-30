@@ -12,13 +12,8 @@ res = input.timeframe("D", title="Higher Timeframe Resolution")
 price = input.source(close, title="Source of Price")
 
 // =====================================================
-// JARVIS RISK MANAGEMENT
+// JARVIS SWING STOP
 // =====================================================
-
-riskPerTrade = input.float(4.0, title="Risk per trade %", minval=0.1, step=0.25) / 100.0
-maxSinglePosition = input.float(100.0, title="Max single position %", minval=1.0, maxval=100.0, step=1.0) / 100.0
-maxMarketExposure = input.float(100.0, title="Max market exposure %", minval=1.0, maxval=100.0, step=1.0) / 100.0
-minimumReserve = input.float(0.0, title="Minimum USDC reserve %", minval=0.0, maxval=100.0, step=1.0) / 100.0
 
 swingLookback = input.int(12, minval=1, title="Swing Low Lookback")
 swingBuffer = input.float(-0.75, title="Swing Low Buffer %", minval=-5.0, step=0.05) / 100.0
@@ -123,28 +118,7 @@ stopDistanceFraction = stopDistance > 0 ? stopDistance / entryReference : na
 // POSITION SIZING
 // =====================================================
 
-// Risk budget:
-// 300 USDC × 4% = 12 USDC initially.
-
-riskBudget = strategy.equity * riskPerTrade
-
-// Desired position size based purely on stop distance.
-
-riskBasedNotional = not na(stopDistanceFraction) and stopDistanceFraction > 0 ? riskBudget / stopDistanceFraction : 0.0
-
-// Capital caps.
-
-maxSinglePositionCap = strategy.equity * maxSinglePosition
-marketExposureCap = strategy.equity * maxMarketExposure
-reserveCap = strategy.equity * (1.0 - minimumReserve)
-
-// Final position size.
-
-finalNotional = math.min(riskBasedNotional, math.min(maxSinglePositionCap, math.min(marketExposureCap, reserveCap)))
-
-// Convert USDC notional to coin quantity.
-
-orderQty = entryReference > 0 ? finalNotional / entryReference : 0.0
+// Full-capital spot: each entry uses the whole available balance.
 
 // =====================================================
 // POSITION STATE
