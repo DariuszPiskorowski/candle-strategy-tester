@@ -127,7 +127,7 @@ stopDistanceFraction = stopDistance > 0 ? stopDistance / entryReference : na
 var float activeStop = na
 var float entryNotional = na
 
-validRisk = candidateStop > 0 and candidateStop < entryReference and finalNotional > 0 and orderQty > 0
+validRisk = candidateStop > 0 and candidateStop < entryReference
 
 // =====================================================
 // ENTRY
@@ -135,8 +135,7 @@ validRisk = candidateStop > 0 and candidateStop < entryReference and finalNotion
 
 if longCondition and strategy.position_size == 0 and validRisk
     activeStop := candidateStop
-    entryNotional := finalNotional
-    strategy.entry("Long", strategy.long, qty=orderQty)
+    strategy.entry("Long", strategy.long)
 
 // =====================================================
 // EXIT
