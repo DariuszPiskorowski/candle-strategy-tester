@@ -57,9 +57,9 @@ test('every entry spends the available spot balance including BUY fee',()=> {
   assert.ok(Math.abs(r.stats.finalEquity-expected)<1e-8);
 });
 
-test('legacy risk and reserve inputs no longer affect sizing',()=> {
+test('removed legacy risk and reserve inputs no longer affect sizing',()=> {
   const a=runJarvis(candles,{...params,riskPerTrade:0.1,maxSinglePosition:1,maxMarketExposure:1,minimumReserve:99},header);
-  const b=runJarvis(candles,{...params,riskPerTrade:100,maxSinglePosition:100,maxMarketExposure:100,minimumReserve:0},header);
+  const b=runJarvis(candles,params,header);
   assert.deepEqual(a,b);
 });
 
