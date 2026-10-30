@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import { TradingChart, type IndicatorSettings } from "@/components/chart/TradingChart";
 import { StrategyPanel } from "@/components/strategy/StrategyPanel";
+import { restoreStrategyParams, saveStrategyParams } from "@/lib/strategy/saved-params";
 import {
   parsePineHeader,
   parsePineInputs,
@@ -147,7 +148,7 @@ function Index() {
     const code = STRATEGY_SOURCES[id];
     if (!code) return;
     setStrategy({ name: `${id} (ostatnie najlepsze)`, code });
-    setParams(parsePineInputs(code));
+    setParams(restoreStrategyParams(window.localStorage, id, parsePineInputs(code)));
     setStrategyColors(getEngine(id)?.parseColors(code) ?? []);
     setStratListOpen(false);
   }
@@ -161,6 +162,10 @@ function Index() {
   const supported = !!engine;
   const activeEngineId = strategy ? detectEngine(strategy.code)?.id ?? null : null;
   const strategyList = ENGINES.filter((e) => STRATEGY_SOURCES[e.id]);
+  useEffect(() => {
+    const code = STRATEGY_SOURCES[ACTIVE_STRATEGY_ID];
+    if (code) setParams(restoreStrategyParams(window.localStorage, ACTIVE_STRATEGY_ID, parsePineInputs(code)));
+  }, []);
   const header = useMemo(() => (strategy ? parsePineHeader(strategy.code) : null), [strategy]);
   const result = useMemo(() => {
     if (!strategy || !engine || !header || candles.length < 50) return null;
@@ -730,9 +735,14 @@ function Index() {
             )}
             {strategy && supported && header && (
               <StrategyPanel
+                key={strategy.code}
                 header={header}
                 params={params}
                 onParams={setParams}
+                onSaveParams={() => {
+                  if (!activeEngineId) throw new Error("Brak aktywnej strategii");
+                  saveStrategyParams(window.localStorage, activeEngineId, params);
+                }}
                 colors={strategyColors}
                 onColors={setStrategyColors}
                 result={result}
