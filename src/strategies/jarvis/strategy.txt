@@ -125,7 +125,6 @@ stopDistanceFraction = stopDistance > 0 ? stopDistance / entryReference : na
 // =====================================================
 
 var float activeStop = na
-var float entryNotional = na
 
 validRisk = candidateStop > 0 and candidateStop < entryReference
 
@@ -157,7 +156,6 @@ if strategy.position_size > 0
 
 if strategy.position_size == 0 and strategy.position_size[1] > 0
     activeStop := na
-    entryNotional := na
 
 // =====================================================
 // VISUALS
