@@ -19,7 +19,7 @@
 - Stop plots are split into independent constant-level active intervals in the chart layer, because lightweight-charts connects across whitespace; presentation must not change engine calculations.
 
 ## Strategies
-- User-saved parameter overrides live in browser storage per strategy ID and restore after hydration or registry selection; explicit strategy uploads retain their own defaults, and tuning source files remain unchanged.
+- Parameter defaults load from strategy source, never browser overrides; the Save control exports a .txt with current input defaults because deployed Workers cannot rewrite bundled project source files. Repository default changes require a source edit and deployment.
 - Each strategy lives in src/strategies/<id>/ (strategy.txt + engine.ts implementing StrategyEngine) and is listed in src/strategies/registry.ts; active.json picks the default, because the app and the tuning script must share one engine contract.
 - The tuning script writes the best found settings back into that strategy.txt as input defaults, because the app auto-loads it and should always show the latest best settings.
 - __root has an inline boot watchdog (reloads up to 3x if the app hasn't hydrated in 15 s) and vite optimizeDeps pre-bundles dynamically imported libs, because cold dev-server starts left the preview stuck on "Ładowanie wykresu…" with 0 candles.

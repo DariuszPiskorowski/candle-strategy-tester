@@ -163,10 +163,10 @@ export function StrategyPanel({ header, params, onParams, onSaveParams, colors, 
                 setSaveError(true);
               }
             }}>
-              <Save aria-hidden="true" /> Zapisz
+              <Save aria-hidden="true" /> Zapisz .txt
             </Button>
             <span role="status" className={`text-[11px] ${saveError ? "text-bear" : "text-muted-foreground"}`}>
-              {saveError ? "Nie udało się zapisać ustawień." : savedParams === JSON.stringify(params) ? "Zapisano" : ""}
+              {saveError ? "Nie udało się zapisać pliku." : savedParams === JSON.stringify(params) ? "Pobrano plik strategii" : ""}
             </span>
           </div>
           {params.map((p, idx) => (
