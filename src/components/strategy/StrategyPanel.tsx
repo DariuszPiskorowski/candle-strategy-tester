@@ -7,7 +7,7 @@ type Props = {
   header: PineHeader;
   params: PineInput[];
   onParams: (p: PineInput[]) => void;
-  onSaveParams: () => void;
+  onSaveParams: () => Promise<string>;
   colors: StrategyColor[];
   onColors: (colors: StrategyColor[]) => void;
   result: StrategyResult | null;
@@ -154,19 +154,19 @@ export function StrategyPanel({ header, params, onParams, onSaveParams, colors, 
       {tab === "params" && (
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => {
+            <Button variant="outline" size="sm" onClick={async () => {
               try {
-                onSaveParams();
-                setSavedParams(JSON.stringify(params));
+                const msg = await onSaveParams();
+                setSavedParams(msg);
                 setSaveError(false);
               } catch {
                 setSaveError(true);
               }
             }}>
-              <Save aria-hidden="true" /> Zapisz .txt
+              <Save aria-hidden="true" /> Zapisz
             </Button>
             <span role="status" className={`text-[11px] ${saveError ? "text-bear" : "text-muted-foreground"}`}>
-              {saveError ? "Nie udało się zapisać pliku." : savedParams === JSON.stringify(params) ? "Pobrano plik strategii" : ""}
+              {saveError ? "Nie udało się zapisać pliku." : savedParams ?? ""}
             </span>
           </div>
           {params.map((p, idx) => (
