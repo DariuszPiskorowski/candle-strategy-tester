@@ -1,5 +1,5 @@
-import { parsePineInputs, type PineInput } from "./jarvis";
-import { strategyWithParams } from "./source-params";
+import { parsePineInputs, type PineInput } from "./jarvis.ts";
+import { strategyWithParams } from "./source-params.ts";
 
 /** params.txt: one `name = value` per line; `#` starts a comment. */
 export function parseParamsFile(text: string): Record<string, number | boolean | string> {
