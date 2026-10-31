@@ -6,6 +6,7 @@ import { TradingChart, type IndicatorSettings } from "@/components/chart/Trading
 import { StrategyPanel } from "@/components/strategy/StrategyPanel";
 import { downloadStrategySource, strategyWithParams } from "@/lib/strategy/source-params";
 import { formatParamsFile } from "@/lib/strategy/params-file";
+import { saveParamsFile } from "@/lib/strategy/params-file.functions";
 import {
   parsePineHeader,
   parsePineInputs,
@@ -736,9 +737,14 @@ function Index() {
                 header={header}
                 params={params}
                 onParams={setParams}
-                onSaveParams={() => {
+                onSaveParams={async () => {
                   strategyWithParams(strategy.code, params); // validates values
-                  downloadStrategySource(formatParamsFile(params), "params");
+                  const text = formatParamsFile(params);
+                  const id = activeEngineId ?? "";
+                  const res = id ? await saveParamsFile({ data: { id, text } }).catch(() => ({ ok: false as const })) : { ok: false as const };
+                  if (res.ok) return `Zapisano w src/strategies/${id}/params.txt`;
+                  downloadStrategySource(text, "params");
+                  return "Serwer nie pozwala zapisać — pobrano params.txt";
                 }}
                 colors={strategyColors}
                 onColors={setStrategyColors}
