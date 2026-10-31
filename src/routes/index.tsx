@@ -5,6 +5,7 @@ import { Moon, Sun } from "lucide-react";
 import { TradingChart, type IndicatorSettings } from "@/components/chart/TradingChart";
 import { StrategyPanel } from "@/components/strategy/StrategyPanel";
 import { downloadStrategySource, strategyWithParams } from "@/lib/strategy/source-params";
+import { formatParamsFile } from "@/lib/strategy/params-file";
 import {
   parsePineHeader,
   parsePineInputs,
@@ -736,8 +737,8 @@ function Index() {
                 params={params}
                 onParams={setParams}
                 onSaveParams={() => {
-                  const code = strategyWithParams(strategy.code, params);
-                  downloadStrategySource(code, activeEngineId ?? strategy.name);
+                  strategyWithParams(strategy.code, params); // validates values
+                  downloadStrategySource(formatParamsFile(params), "params");
                 }}
                 colors={strategyColors}
                 onColors={setStrategyColors}
