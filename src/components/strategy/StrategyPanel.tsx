@@ -7,7 +7,9 @@ type Props = {
   header: PineHeader;
   params: PineInput[];
   onParams: (p: PineInput[]) => void;
-  onSaveParams: () => Promise<string>;
+  /** Returns the params.txt content for the current settings. */
+  onSaveParams: () => string;
+  paramsFilePath: string;
   colors: StrategyColor[];
   onColors: (colors: StrategyColor[]) => void;
   result: StrategyResult | null;
@@ -17,15 +19,36 @@ type Props = {
   onPdf?: () => Promise<void>;
 };
 
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
 const fmt = (v: number, d = 2) =>
   Number.isFinite(v) ? v.toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d }) : "∞";
 const dt = (t: number) =>
   new Date(t * 1000).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Dublin", hourCycle: "h23" });
 
-export function StrategyPanel({ header, params, onParams, onSaveParams, colors, onColors, result, showPlots, onShowPlots, dec, onPdf }: Props) {
+export function StrategyPanel({ header, params, onParams, onSaveParams, paramsFilePath, colors, onColors, result, showPlots, onShowPlots, dec, onPdf }: Props) {
   const [tab, setTab] = useState<"stats" | "trades" | "params">("stats");
-  const [savedParams, setSavedParams] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState(false);
+  const [copied, setCopied] = useState<"ok" | "manual" | null>(null);
+  const [manualText, setManualText] = useState<string | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
   const s = result?.stats;
   const cls = (v: number) => (v >= 0 ? "text-bull" : "text-bear");
@@ -155,20 +178,26 @@ export function StrategyPanel({ header, params, onParams, onSaveParams, colors, 
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={async () => {
-              try {
-                const msg = await onSaveParams();
-                setSavedParams(msg);
-                setSaveError(false);
-              } catch {
-                setSaveError(true);
-              }
+              const text = onSaveParams();
+              const ok = await copyText(text);
+              setCopied(ok ? "ok" : "manual");
+              setManualText(ok ? null : text);
             }}>
               <Save aria-hidden="true" /> Zapisz
             </Button>
-            <span role="status" className={`text-[11px] ${saveError ? "text-bear" : "text-muted-foreground"}`}>
-              {saveError ? "Nie udało się zapisać do params.txt (zapis działa tylko w podglądzie)." : savedParams ?? ""}
+            <span role="status" className="text-[11px] text-muted-foreground">
+              {copied === "ok" ? `Skopiowano — wklej (Ctrl+V) w miejsce całej treści ${paramsFilePath}` : copied === "manual" ? `Skopiuj poniższy tekst i wklej do ${paramsFilePath}` : ""}
             </span>
           </div>
+          {manualText && (
+            <textarea
+              readOnly
+              className="tv-input h-40 w-full font-mono text-[10px]"
+              value={manualText}
+              onFocus={(e) => e.currentTarget.select()}
+              autoFocus
+            />
+          )}
           {params.map((p, idx) => (
             <label key={p.name} className="flex items-center gap-2 text-[11px]">
               <span className="min-w-0 flex-1 truncate text-muted-foreground" title={p.title}>
