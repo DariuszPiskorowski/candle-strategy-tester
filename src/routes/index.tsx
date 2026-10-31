@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import { TradingChart, type IndicatorSettings } from "@/components/chart/TradingChart";
 import { StrategyPanel } from "@/components/strategy/StrategyPanel";
-import { downloadStrategySource, strategyWithParams } from "@/lib/strategy/source-params";
+import { strategyWithParams } from "@/lib/strategy/source-params";
 import { formatParamsFile } from "@/lib/strategy/params-file";
 import { saveParamsFile } from "@/lib/strategy/params-file.functions";
 import {
@@ -743,8 +743,7 @@ function Index() {
                   const id = activeEngineId ?? "";
                   const res = id ? await saveParamsFile({ data: { id, text } }).catch(() => ({ ok: false as const })) : { ok: false as const };
                   if (res.ok) return `Zapisano w src/strategies/${id}/params.txt`;
-                  downloadStrategySource(text, "params");
-                  return "Serwer nie pozwala zapisać — pobrano params.txt";
+                  throw new Error("save failed");
                 }}
                 colors={strategyColors}
                 onColors={setStrategyColors}

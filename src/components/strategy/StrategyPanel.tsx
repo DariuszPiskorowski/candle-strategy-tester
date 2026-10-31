@@ -166,7 +166,7 @@ export function StrategyPanel({ header, params, onParams, onSaveParams, colors, 
               <Save aria-hidden="true" /> Zapisz
             </Button>
             <span role="status" className={`text-[11px] ${saveError ? "text-bear" : "text-muted-foreground"}`}>
-              {saveError ? "Nie udało się zapisać pliku." : savedParams ?? ""}
+              {saveError ? "Nie udało się zapisać do params.txt (zapis działa tylko w podglądzie)." : savedParams ?? ""}
             </span>
           </div>
           {params.map((p, idx) => (
