@@ -743,8 +743,7 @@ function Index() {
                   const id = activeEngineId ?? "";
                   const res = id ? await saveParamsFile({ data: { id, text } }).catch(() => ({ ok: false as const })) : { ok: false as const };
                   if (res.ok) return `Zapisano w src/strategies/${id}/params.txt`;
-                  downloadStrategySource(text, "params");
-                  return "Serwer nie pozwala zapisać — pobrano params.txt";
+                  throw new Error("save failed");
                 }}
                 colors={strategyColors}
                 onColors={setStrategyColors}
