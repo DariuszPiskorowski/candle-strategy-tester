@@ -1,0 +1,18 @@
+# Parametry strategii — podmień ten plik, aby zmienić ustawienia.
+onlyBuy = false   # Tylko BUY
+onlySell = false   # Tylko SELL
+period = 5   # Double HullMA X Period
+res = D   # Higher Timeframe Resolution
+swingLookback = 12   # Swing Low Lookback
+swingBuffer = -0.75   # Swing Low Buffer %
+useSidewaysFilter = true   # Enable Sideways Filter
+sidewaysLookback = 8   # Sideways Lookback
+sidewaysMaxRangePct = 5   # Sideways Max Range %
+sidewaysMaxAvgBodyPct = 3   # Sideways Max Avg Body %
+conversionPeriod = 8   # Conversion Line Period
+basePeriod = 25   # Base Line Period
+laggingSpanPeriod = 11   # Lagging Span 2 Period
+displacement = 9   # Displacement
+macdLength = 9   # Hull-MACD Signal Length
+macdFastLength = 13   # Hull-MACD Fast Length
+macdSlowLength = 33   # Hull-MACD Slow Length

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseCandles } from '../src/lib/candles.ts';
 import { parsePineInputs, parsePineHeader } from '../src/lib/strategy/jarvis.ts';
+import { applyParamsFile, formatParamsFile } from '../src/lib/strategy/params-file.ts';
 import { ACTIVE_STRATEGY_ID, getEngine } from '../src/strategies/registry.ts';
 
 const configPath = path.resolve(process.argv[2] ?? 'ai-gateway/config.json');
@@ -18,7 +19,8 @@ const engine = getEngine(strategyId);
 if (!engine) throw new Error('Brak silnika strategii: ' + strategyId);
 const strategyPath = cfg.strategyFile ? path.join(dataDir, cfg.strategyFile)
   : path.resolve(path.dirname(new URL(import.meta.url).pathname), '../src/strategies', strategyId, 'strategy.txt');
-const source = fs.readFileSync(strategyPath, 'utf8');
+const paramsPath = path.join(path.dirname(strategyPath), 'params.txt');
+const source = applyParamsFile(fs.readFileSync(strategyPath, 'utf8'), fs.existsSync(paramsPath) ? fs.readFileSync(paramsPath, 'utf8') : undefined);
 const header = parsePineHeader(source);
 const fileParams = Object.fromEntries(parsePineInputs(source).map(p => [p.name, p.value]));
 const unknown = Object.keys(cfg.params ?? {}).filter(k => !(k in fileParams));
@@ -136,18 +138,14 @@ const out = {
   validation: valWindow ? { start: summarize(run(startParams, valWindow)), best: summarize(run(best.params, valWindow)) } : null,
   months, converged, uniqueTests: cache.size, changes, trades: final.trades, trials,
 };
-// Najnowsze najlepsze ustawienia zawsze zapisujemy jako domyslne w strategy.txt.
+// Najnowsze najlepsze ustawienia zawsze zapisujemy do params.txt obok strategii.
 let savedDefaults = false;
 if (cfg.mode === 'tune' && cfg.saveBest !== false && compare(best, start) > 0) {
-  let code = source;
-  for (const [k, v] of Object.entries(best.params)) {
-    if (typeof v !== 'number' && typeof v !== 'boolean') continue;
-    code = code.replace(new RegExp(`^(\\s*${k}\\s*=\\s*input\\.\\w+\\()([^,)]*)`, 'm'), (_, a) => a + String(v));
-  }
-  fs.writeFileSync(strategyPath, code);
+  const all = parsePineInputs(source).map(p => (p.name in best.params ? { ...p, value: best.params[p.name] } : p));
+  fs.writeFileSync(paramsPath, formatParamsFile(all));
   savedDefaults = true;
 }
-out.strategy = { id: strategyId, file: strategyPath, savedDefaults };
+out.strategy = { id: strategyId, file: strategyPath, paramsFile: paramsPath, savedDefaults };
 const resultsPath = path.resolve(base, cfg.resultsFile ?? 'results.json');
 fs.writeFileSync(resultsPath, JSON.stringify(out, null, 2));
 if (warmupCandles < 100) console.warn('UWAGA: tylko', warmupCandles, 'swiec rozgrzewki przed testStart');
