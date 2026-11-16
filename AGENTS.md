@@ -20,6 +20,7 @@
 - Stop plots are split into independent constant-level active intervals in the chart layer, because lightweight-charts connects across whitespace; presentation must not change engine calculations.
 
 ## Strategies
+- CLI broad tuning uses seeded whole-parameter sampling followed by full-range coordinate passes with a strict unique-test budget; this explores beyond local downhill stops without changing strategy calculations.
 - Parameter defaults load from strategy source, never browser overrides; the Save control exports a .txt with current input defaults because deployed Workers cannot rewrite bundled project source files. Repository default changes require a source edit and deployment.
 - Each strategy lives in src/strategies/<id>/ (strategy.txt + engine.ts implementing StrategyEngine) and is listed in src/strategies/registry.ts; active.json picks the default, because the app and the tuning script must share one engine contract.
 - Current parameter values live in src/strategies/<id>/params.txt (name = value) applied over strategy.txt defaults by the app and the tuner; the tuner writes it in place, the app's Save button only copies its content to the clipboard (never a download), because the Lovable preview and published site run on Workers with no writable project files.

@@ -16,7 +16,10 @@
     "maxDrawdownPct": 30
   },
   "tune": {
-    "maxTests": 600,
+    "search": "broad",
+    "seed": 20261116,
+    "randomTests": 6000,
+    "maxTests": 12000,
     "maxPasses": 12,
     "parameters": [
       {

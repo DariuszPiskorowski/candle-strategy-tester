@@ -40,7 +40,9 @@ const gaps = [];
 for (let i = 1; i < candles.length; i++) if (candles[i].time - candles[i - 1].time !== interval) gaps.push(candles[i].time);
 
 const now = Math.floor(Date.now() / 1000);
-const fourMonthsAgo = Math.floor(new Date(Date.now() - 122 * 864e5).setUTCHours(0, 0, 0, 0) / 1000);
+const fourMonthsDate = new Date(now * 1000);
+fourMonthsDate.setUTCMonth(fourMonthsDate.getUTCMonth() - 4);
+const fourMonthsAgo = Math.floor(fourMonthsDate.getTime() / 1000);
 const testStart = cfg.testStart ? day(cfg.testStart) : fourMonthsAgo;
 const testEnd = cfg.testEnd ? day(cfg.testEnd, true) : now;
 const valStart = cfg.validationStart ? day(cfg.validationStart) : null;
@@ -88,13 +90,43 @@ const changes = [];
 if (cfg.mode === 'tune') {
   const list = cfg.tune?.parameters ?? [];
   for (const t of list) if (!(t.name in fileParams)) throw new Error('Nieznany parametr do tuningu: ' + t.name);
+  const maxTests = cfg.tune.maxTests ?? 600;
+  const broad = cfg.tune.search === 'broad';
+  if (broad) {
+    // Powtarzalne próby całych zestawów: szeroki zakres + sąsiedztwo aktualnego najlepszego.
+    let seed = (cfg.tune.seed ?? 20261116) >>> 0;
+    const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+    const samples = Math.min(cfg.tune.randomTests ?? 4000, maxTests - cache.size);
+    for (let i = 0; i < samples && cache.size < maxTests; i++) {
+      const local = i % 3 === 0;
+      const candidate = { ...(local ? best.params : startParams) };
+      for (const { name, step, min, max, bool } of list) {
+        if (local && random() < 0.5) continue;
+        if (bool) candidate[name] = random() < 0.5;
+        else {
+          const count = Math.floor((max - min) / step + 1e-8);
+          const index = local
+            ? Math.max(0, Math.min(count, Math.round((candidate[name] - min) / step) + Math.floor(random() * 11) - 5))
+            : Math.floor(random() * (count + 1));
+          candidate[name] = Number((min + index * step).toFixed(8));
+        }
+      }
+      if (candidate.macdFastLength >= candidate.macdSlowLength) continue;
+      const result = evaluate(candidate, { stage: 'broad', sample: i + 1 });
+      if (compare(result, best) > 0) best = result;
+      if ((i + 1) % 500 === 0) console.log('BROAD', i + 1, 'testy', cache.size, 'zysk%', best.stats.liquidationProfitPct.toFixed(2));
+    }
+  }
   converged = false;
   for (let pass = 1; pass <= (cfg.tune.maxPasses ?? 12); pass++) {
+    if (cache.size >= maxTests) break;
     let changed = false;
     for (const { name, step, min, max, bool } of list) {
+      if (cache.size >= maxTests) break;
       const anchor = best; let top = anchor;
       if (bool) {
         for (const v of [true, false]) {
+          if (cache.size >= maxTests) break;
           if (v === anchor.params[name]) continue;
           const c = evaluate({ ...anchor.params, [name]: v }, { stage: 'tune', pass, parameter: name });
           if (compare(c, top) > 0) top = c;
@@ -102,14 +134,15 @@ if (cfg.mode === 'tune') {
       } else {
         for (const dir of [1, -1]) {
           let prev = anchor, flats = 0;
-          for (let d = 1; d <= 100; d++) {
+          for (let d = 1; d <= Math.ceil((max - min) / step); d++) {
+            if (cache.size >= maxTests) break;
             const v = Number((anchor.params[name] + dir * step * d).toFixed(8));
             if (!allowed(anchor.params, name, v, min, max)) break;
             const c = evaluate({ ...anchor.params, [name]: v }, { stage: 'tune', pass, parameter: name });
             if (compare(c, top) > 0) top = c;
             const vs = compare(c, prev);
-            if (vs < 0) break;
-            if (vs === 0) { if (++flats >= 3) break; } else flats = 0;
+            if (!broad && vs < 0) break;
+            if (!broad && vs === 0) { if (++flats >= 3) break; } else flats = 0;
             prev = c;
           }
         }
@@ -118,7 +151,7 @@ if (cfg.mode === 'tune') {
     }
     console.log('PASS', pass, 'testy', cache.size, 'zysk%', best.stats.liquidationProfitPct.toFixed(2), 'DD%', best.stats.conservativeDDPct.toFixed(2));
     if (!changed) { converged = true; break; }
-    if (cache.size >= (cfg.tune.maxTests ?? 600)) break;
+    if (cache.size >= maxTests) break;
   }
 }
 
@@ -132,7 +165,7 @@ for (let t = testStart; t <= testEnd;) {
 const final = run(best.params, fitWindow);
 const out = {
   generatedAt: new Date().toISOString(), config: cfg, header,
-  data: { candles: candles.length, interval, warmupCandles, duplicates, gaps, first: new Date(candles[0].time * 1000).toISOString(), last: new Date(candles.at(-1).time * 1000).toISOString() },
+  data: { candles: candles.length, interval, warmupCandles, duplicates, gaps, testStart: new Date(testStart * 1000).toISOString(), testEnd: new Date(testEnd * 1000).toISOString(), first: new Date(candles[0].time * 1000).toISOString(), last: new Date(candles.at(-1).time * 1000).toISOString() },
   start: start.stats, best: { params: best.params, stats: best.stats },
   changedParams: Object.fromEntries(Object.entries(best.params).filter(([k, v]) => fileParams[k] !== v)),
   validation: valWindow ? { start: summarize(run(startParams, valWindow)), best: summarize(run(best.params, valWindow)) } : null,

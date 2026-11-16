@@ -7,13 +7,14 @@
 Pola `config.json`:
 - `mode`: `evaluate` = przelicz podane ustawienia; `tune` = samodzielnie szukaj lepszych.
 - `strategy`: id strategii (folder `src/strategies/<id>/`); `null` = aktywna z `src/strategies/active.json`.
-- `saveBest`: `true` (domyślnie) = po tuningu najlepsze znalezione ustawienia zapisują się jako domyślne w `src/strategies/<id>/strategy.txt` — aplikacja od razu pokazuje je na wykresie.
+- `saveBest`: `true` (domyślnie) = lepsze znalezione ustawienia zapisują się w `src/strategies/<id>/params.txt`; aplikacja czyta je przy ponownym uruchomieniu.
 - `dataDir`, `candleFiles`: pliki (świece wcześniejsze niż `testStart` służą tylko do rozgrzewki, np. 6 mies. danych na 4 mies. testu).
 - `testStart` / `testEnd`: okres handlu (RRRR-MM-DD, UTC). `testStart: null` = 4 miesiące wstecz od teraz, `testEnd: null` = bieżąca data i godzina (domyślnie oba null — strategia handluje przez ostatnie 4 miesiące, a wcześniejsze świece tylko rozgrzewają wskaźniki).
 - `validationStart`: opcjonalnie; od tej daty do `testEnd` jest okres sprawdzenia, którego tuning nie widzi.
 - `params`: nadpisania wartości z pliku Pine (nazwy jak zmienne w Pine).
 - `objective.maxDrawdownPct`: limit obsunięcia.
 - `tune.parameters`: lista do przeszukania. Parametry liczbowe: `{name, step, min, max}`. Parametry włącz/wyłącz (bool): `{name, "bool": true}` — skrypt sprawdzi obie wartości.
+- `tune.search: "broad"`: losuje całe zestawy parametrów (powtarzalny `seed`, liczba `randomTests`), następnie przeszukuje pełne zakresy pojedynczych parametrów. `maxTests` to twardy limit unikalnych ocen; `maxPasses` ogranicza liczbę przejść. To szukanie lepszego wyniku historycznego, nie gwarancja optimum ani przyszłego zysku. Kierunek BUY/SELL i wyższy interwał pozostają bez zmian.
 
 Dostępne parametry (nazwy jak w pliku Pine): `hmaLength`, `conversionPeriod`, `basePeriod`, `laggingSpanPeriod`, `displacement`, `macdFastLength`, `macdSlowLength`, `macdSignalLength`, `swingLookback`, `swingBuffer`, `useSidewaysFilter` (bool), `sidewaysLookback`, `sidewaysMaxRangePct`, `sidewaysMaxAvgBodyPct`. Wszystkie są już wpisane w `config.json` — wystarczy zmieniać zakresy/kroki albo usuwać pozycje z listy.
 

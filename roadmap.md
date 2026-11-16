@@ -1,4 +1,5 @@
 # Zadania
+- [x] Uruchomić szerokie strojenie SOL/USDC Orca, zapisać najlepsze parametry i sprawdzić wyniki (5441 zestawów, 14 parametrów).
 - [x] Przełączyć domyślny wykres na SOL/USDC z podanej puli Orca, sprawdzić historię i salda.
 - [x] Wpisać parametry ze zrzutu do kodu strategii.
 - [x] Zastąpić zapis w przeglądarce zapisem kodu do pliku .txt i sprawdzić odczyt pliku.
