@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import type { PineHeader, PineInput, StrategyColor, StrategyResult } from "@/lib/strategy/jarvis";
 
 type Props = {
+  assetSymbol?: string;
   header: PineHeader;
   params: PineInput[];
   onParams: (p: PineInput[]) => void;
@@ -45,7 +46,7 @@ const fmt = (v: number, d = 2) =>
 const dt = (t: number) =>
   new Date(t * 1000).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Dublin", hourCycle: "h23" });
 
-export function StrategyPanel({ header, params, onParams, onSaveParams, paramsFilePath, colors, onColors, result, showPlots, onShowPlots, dec, onPdf }: Props) {
+export function StrategyPanel({ assetSymbol = "SOL", header, params, onParams, onSaveParams, paramsFilePath, colors, onColors, result, showPlots, onShowPlots, dec, onPdf }: Props) {
   const [tab, setTab] = useState<"stats" | "trades" | "params">("stats");
   const [copied, setCopied] = useState<"ok" | "manual" | null>(null);
   const [manualText, setManualText] = useState<string | null>(null);
@@ -129,9 +130,9 @@ export function StrategyPanel({ header, params, onParams, onSaveParams, paramsFi
               ["Maks. obsunięcie", `${fmt(s.maxDrawdown)} USD (${fmt(s.maxDrawdownPct)}%)`, -1],
               ["DD — ostrożna granica OHLC", `${fmt(s.maxIntrabarDrawdownPct)}%`, -1],
               ["Prowizje", `${fmt(s.commission)} USD`],
-              ["Stan portfela", s.positionSide === "BUY" ? "BUY otwarta — trzymamy SUI" : s.positionSide === "SELL" ? "SELL otwarta — trzymamy USDC" : "Bez pozycji — trzymamy USDC"],
+              ["Stan portfela", s.positionSide === "BUY" ? `BUY otwarta — trzymamy ${assetSymbol}` : s.positionSide === "SELL" ? "SELL otwarta — trzymamy USDC" : "Bez pozycji — trzymamy USDC"],
               ["Saldo USDC", `${fmt(s.usdcBalance)} USDC`],
-              ["Saldo SUI", s.suiBalance > 0 ? `${fmt(s.suiBalance, 4)} SUI (≈ ${fmt(s.suiValueUsdc)} USDC)` : "0 SUI"],
+              [`Saldo ${assetSymbol}`, s.suiBalance > 0 ? `${fmt(s.suiBalance, 4)} ${assetSymbol} (≈ ${fmt(s.suiValueUsdc)} USDC)` : `0 ${assetSymbol}`],
               ["Razem w USDC", `${fmt(s.totalUsdc)} USD`, s.totalUsdc - s.initialCapital],
               ["Śr. długość", `${fmt(s.avgBars, 1)} świec`],
               ["Wyjścia SELL / SL", `${s.signalExits} / ${s.stopExits}`],

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import { TradingChart, type IndicatorSettings } from "@/components/chart/TradingChart";
 import { StrategyPanel } from "@/components/strategy/StrategyPanel";
+import { Button } from "@/components/ui/button";
 import { strategyWithParams } from "@/lib/strategy/source-params";
 import { formatParamsFile } from "@/lib/strategy/params-file";
 import {
@@ -16,6 +17,7 @@ import { aggregate, detectInterval, parseCandles, TIMEFRAMES, type Candle } from
 import { ACTIVE_STRATEGY_ID, ENGINES, detectEngine, getEngine } from "@/strategies/registry";
 import { STRATEGY_SOURCES } from "@/strategies/sources";
 import { BINANCE_INTERVALS, BINANCE_PAIRS, fetchHistory, fetchLatest } from "@/lib/binance";
+import { ORCA_POOL, ORCA_INTERVALS, fetchOrcaHistory, fetchOrcaLatest } from "@/lib/orca";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -69,7 +71,8 @@ function Index() {
   const [indMenuOpen, setIndMenuOpen] = useState(false);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [bnPair, setBnPair] = useState<string>("SUIUSDC");
+  const [bnPair, setBnPair] = useState<string>("ORCA_SOLUSDC");
+  const [assetSymbol, setAssetSymbol] = useState("SOL");
   const [bnInterval, setBnInterval] = useState<string>("4h");
   const [bnLoading, setBnLoading] = useState(false);
   const bnLoadingRef = useRef(false);
@@ -108,7 +111,7 @@ function Index() {
     };
   }, [indMenuOpen]);
 
-  // Start: dane z Binance (SUI/USDC 4h); dopóki nie ma żadnych świec, ponawia co 10 s
+  // Start: SOL/USDC z konkretnej puli Orca; bez zastępowania cenami Binance.
   useEffect(() => {
     void loadBinance();
     const id = window.setInterval(() => {
@@ -217,17 +220,19 @@ function Index() {
   async function loadBinance() {
     setBnLoading(true);
     try {
-      const list = await fetchHistory(bnPair, bnInterval, 6);
-      if (!list.length) throw new Error("Binance nie zwrócił świec.");
+      const isOrca = bnPair === "ORCA_SOLUSDC";
+      const list = isOrca ? await fetchOrcaHistory(bnInterval, 6) : await fetchHistory(bnPair, bnInterval, 6);
+      if (!list.length) throw new Error("Źródło nie zwróciło świec.");
       setRaw(list);
-      setFileName(`Binance ${bnPair} ${bnInterval}`);
+      setAssetSymbol(isOrca ? "SOL" : bnPair.replace("USDC", ""));
+      setFileName(isOrca ? `Orca SOL/USDC ${bnInterval} · GeckoTerminal` : `Binance ${bnPair} ${bnInterval}`);
       setTf(null);
       setFromDate("");
       setToDate("");
       setError(null);
       setLiveSrc({ pair: bnPair, interval: bnInterval });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Nie udało się pobrać danych z Binance.");
+      setError(e instanceof Error ? e.message : "Nie udało się pobrać danych rynku.");
     } finally {
       setBnLoading(false);
     }
@@ -240,7 +245,9 @@ function Index() {
       const cur0 = rawRef.current;
       if (!cur0.length) return;
       try {
-        const latest = await fetchLatest(liveSrc.pair, liveSrc.interval, cur0[cur0.length - 1].time * 1000);
+        const latest = liveSrc.pair === "ORCA_SOLUSDC"
+          ? await fetchOrcaLatest(liveSrc.interval, cur0[cur0.length - 1].time * 1000)
+          : await fetchLatest(liveSrc.pair, liveSrc.interval, cur0[cur0.length - 1].time * 1000);
         if (stop) return;
         setRaw((cur) => {
           if (!cur.length) return cur;
@@ -340,9 +347,14 @@ function Index() {
           }}
         />
         <div className="tv-divider" />
-        <select className="tv-btn px-1.5 py-0.5 text-xs" value={bnPair} onChange={(e) => setBnPair(e.target.value)}>
+        <select aria-label="Rynek" className="tv-btn px-1.5 py-0.5 text-xs" value={bnPair} onChange={(e) => {
+          setBnPair(e.target.value);
+          setLiveSrc(null);
+          if (e.target.value === "ORCA_SOLUSDC" && !ORCA_INTERVALS.some((i) => i === bnInterval)) setBnInterval("4h");
+        }}>
+          <option value="ORCA_SOLUSDC">SOL/USDC · Orca</option>
           {BINANCE_PAIRS.map((p) => (
-            <option key={p} value={p}>{p.replace("USDC", "/USDC")}</option>
+            <option key={p} value={p}>{p.replace("USDC", "/USDC")} · Binance</option>
           ))}
         </select>
         <select
@@ -354,19 +366,19 @@ function Index() {
             setLiveSrc(null);
           }}
         >
-          {BINANCE_INTERVALS.map((i) => (
+          {(bnPair === "ORCA_SOLUSDC" ? ORCA_INTERVALS : BINANCE_INTERVALS).map((i) => (
             <option key={i} value={i}>{i.toUpperCase()}</option>
           ))}
         </select>
-        <button className="tv-btn" disabled={bnLoading} onClick={() => void loadBinance()}>
-          {bnLoading ? "Pobieram…" : "Pobierz z Binance"}
-        </button>
-        <label className={`flex items-center gap-1 text-xs ${liveSrc ? "" : "opacity-50"}`} title="Aktualizuje cenę bieżącej świecy co 15 s (interwał zostaje bez zmian)">
+        <Button variant="outline" size="sm" className="tv-btn" disabled={bnLoading} onClick={() => void loadBinance()}>
+          {bnLoading ? "Pobieram…" : bnPair === "ORCA_SOLUSDC" ? "Pobierz z Orca" : "Pobierz z Binance"}
+        </Button>
+        <label className={`flex items-center gap-1 text-xs ${liveSrc ? "" : "opacity-50"}`} title={liveSrc?.pair === "ORCA_SOLUSDC" ? "Dane puli przez GeckoTerminal; dostawca może opóźniać aktualizację około minuty." : "Aktualizuje cenę bieżącej świecy co 15 s (interwał zostaje bez zmian)"}>
           <input type="checkbox" className="tv-check" disabled={!liveSrc} checked={live && !!liveSrc} onChange={(e) => setLive(e.target.checked)} />
           Na żywo
           {live && liveSrc && <span className="animate-pulse text-bull">●</span>}
         </label>
-        <span className="font-mono text-xs text-muted-foreground">
+        <span className="min-w-0 truncate font-mono text-xs text-muted-foreground" title={liveSrc?.pair === "ORCA_SOLUSDC" ? `Pula Orca: ${ORCA_POOL}` : fileName}>
           {fileName} · {candles.length} świec
         </span>
 
@@ -733,6 +745,7 @@ function Index() {
             {strategy && supported && header && (
               <StrategyPanel
                 key={strategy.code}
+                assetSymbol={assetSymbol}
                 header={header}
                 params={params}
                 onParams={setParams}

@@ -2,10 +2,11 @@
   "_info": "Plik sterujacy dla zewnetrznego AI. Sciezki wzgledne licza sie od tego folderu. Daty w UTC (RRRR-MM-DD). Swiece sprzed testStart sluza tylko do rozgrzewki wskaznikow (wgrywaj ~6 mies. danych). testStart: null = 4 miesiace wstecz od teraz. testEnd: null = teraz (biezaca data i godzina).",
   "mode": "tune",
   "dataDir": "../data",
+  "market": { "source": "orca", "symbol": "SOLUSDC", "pool": "Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE", "provider": "GeckoTerminal", "refreshCommand": "bun scripts/fetch-orca.mjs 4h" },
   "strategy": null,
   "saveBest": true,
   "candleFiles": [
-    "SUIUSDC_4h.json"
+    "ORCA_SOLUSDC_4h.json"
   ],
   "testStart": null,
   "testEnd": null,
