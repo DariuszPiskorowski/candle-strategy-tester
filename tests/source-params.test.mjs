@@ -8,11 +8,11 @@ const code = readFileSync(new URL('../src/strategies/jarvis/strategy.txt', impor
 
 test('source defaults match all parameter values supplied in the screenshot', () => {
   assert.deepEqual(Object.fromEntries(parsePineInputs(code).map(p => [p.name, p.value])), {
-    onlyBuy: false, onlySell: false, period: 5, res: 'D', price: 'close',
-    swingLookback: 12, swingBuffer: -0.75, useSidewaysFilter: true,
-    sidewaysLookback: 8, sidewaysMaxRangePct: 5, sidewaysMaxAvgBodyPct: 3,
-    conversionPeriod: 8, basePeriod: 25, laggingSpanPeriod: 11, displacement: 9,
-    macdLength: 9, macdFastLength: 13, macdSlowLength: 33,
+    onlyBuy: false, onlySell: false, period: 24, res: 'D', price: 'close',
+    swingLookback: 12, swingBuffer: 2.5, useSidewaysFilter: false,
+    sidewaysLookback: 40, sidewaysMaxRangePct: 2, sidewaysMaxAvgBodyPct: 3,
+    conversionPeriod: 2, basePeriod: 39, laggingSpanPeriod: 51, displacement: 4,
+    macdLength: 32, macdFastLength: 37, macdSlowLength: 38,
   });
 });
 
