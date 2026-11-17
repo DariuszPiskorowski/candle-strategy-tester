@@ -3,17 +3,22 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { parsePineInputs } from '../src/lib/strategy/jarvis.ts';
 import { strategyWithParams } from '../src/lib/strategy/source-params.ts';
+import { applyParamsFile } from '../src/lib/strategy/params-file.ts';
 
 const code = readFileSync(new URL('../src/strategies/jarvis/strategy.txt', import.meta.url), 'utf8');
 
-test('source defaults match all parameter values supplied in the screenshot', () => {
-  assert.deepEqual(Object.fromEntries(parsePineInputs(code).map(p => [p.name, p.value])), {
-    onlyBuy: false, onlySell: false, period: 24, res: 'D', price: 'close',
-    swingLookback: 12, swingBuffer: 2.5, useSidewaysFilter: false,
-    sidewaysLookback: 40, sidewaysMaxRangePct: 2, sidewaysMaxAvgBodyPct: 3,
-    conversionPeriod: 2, basePeriod: 39, laggingSpanPeriod: 51, displacement: 4,
-    macdLength: 32, macdFastLength: 37, macdSlowLength: 38,
-  });
+test('source and effective defaults match the November 17 screenshot', () => {
+  const expected = {
+    onlyBuy: false, onlySell: false, period: 5, res: 'D', price: 'close',
+    swingLookback: 21, swingBuffer: 1.2, useSidewaysFilter: true,
+    sidewaysLookback: 33, sidewaysMaxRangePct: 5, sidewaysMaxAvgBodyPct: 3,
+    conversionPeriod: 25, basePeriod: 27, laggingSpanPeriod: 29, displacement: 5,
+    macdLength: 8, macdFastLength: 12, macdSlowLength: 25,
+  };
+  const params = readFileSync(new URL('../src/strategies/jarvis/params.txt', import.meta.url), 'utf8');
+  for (const source of [code, applyParamsFile(code, params)]) {
+    assert.deepEqual(Object.fromEntries(parsePineInputs(source).map(p => [p.name, p.value])), expected);
+  }
 });
 
 test('exported source restores numeric, boolean and timeframe values without browser storage', () => {

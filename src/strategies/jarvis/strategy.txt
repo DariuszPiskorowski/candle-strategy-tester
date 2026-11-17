@@ -7,7 +7,7 @@ strategy("Ichimoku + Daily + HULL-MA + Hull-MACD + Jarvis RM + Sideways Filter",
 
 onlyBuy = input.bool(false, title="Tylko BUY")
 onlySell = input.bool(false, title="Tylko SELL")
-period = input.int(24, minval=1, title="Double HullMA X Period")
+period = input.int(5, minval=1, title="Double HullMA X Period")
 res = input.timeframe("D", title="Higher Timeframe Resolution")
 price = input.source(close, title="Source of Price")
 
@@ -15,17 +15,17 @@ price = input.source(close, title="Source of Price")
 // JARVIS SWING STOP
 // =====================================================
 
-swingLookback = input.int(12, minval=1, title="Swing Low Lookback")
-swingBuffer = input.float(2.5, title="Swing Low Buffer %", minval=-5.0, step=0.05) / 100.0
+swingLookback = input.int(21, minval=1, title="Swing Low Lookback")
+swingBuffer = input.float(1.2, title="Swing Low Buffer %", minval=-5.0, step=0.05) / 100.0
 
 // =====================================================
 // SIDEWAYS FILTER
 // =====================================================
 
-useSidewaysFilter = input.bool(false, title="Enable Sideways Filter")
+useSidewaysFilter = input.bool(true, title="Enable Sideways Filter")
 
-sidewaysLookback = input.int(40, minval=2, title="Sideways Lookback")
-sidewaysMaxRangePct = input.float(2, minval=0.1, title="Sideways Max Range %", step=0.1) / 100.0
+sidewaysLookback = input.int(33, minval=2, title="Sideways Lookback")
+sidewaysMaxRangePct = input.float(5, minval=0.1, title="Sideways Max Range %", step=0.1) / 100.0
 sidewaysMaxAvgBodyPct = input.float(3, minval=0.1, title="Sideways Max Avg Body %", step=0.1) / 100.0
 
 rangeHigh = ta.highest(high, sidewaysLookback)
@@ -68,10 +68,10 @@ D2 = request.security(syminfo.tickerid, res, price[2], gaps=barmerge.gaps_off, l
 // ICHIMOKU
 // =====================================================
 
-conversionPeriod = input.int(2, minval=1, title="Conversion Line Period")
-basePeriod = input.int(39, minval=1, title="Base Line Period")
-laggingSpanPeriod = input.int(51, minval=1, title="Lagging Span 2 Period")
-displacement = input.int(4, minval=1, title="Displacement")
+conversionPeriod = input.int(25, minval=1, title="Conversion Line Period")
+basePeriod = input.int(27, minval=1, title="Base Line Period")
+laggingSpanPeriod = input.int(29, minval=1, title="Lagging Span 2 Period")
+displacement = input.int(5, minval=1, title="Displacement")
 
 donchian(len) =>
     math.avg(ta.lowest(low, len), ta.highest(high, len))
@@ -85,9 +85,9 @@ leadLine2 = donchian(laggingSpanPeriod)
 // HULL MACD
 // =====================================================
 
-macdLength = input.int(32, minval=1, title="Hull-MACD Signal Length")
-macdFastLength = input.int(37, minval=1, title="Hull-MACD Fast Length")
-macdSlowLength = input.int(38, minval=1, title="Hull-MACD Slow Length")
+macdLength = input.int(8, minval=1, title="Hull-MACD Signal Length")
+macdFastLength = input.int(12, minval=1, title="Hull-MACD Fast Length")
+macdSlowLength = input.int(25, minval=1, title="Hull-MACD Slow Length")
 
 macd = ta.hma(price, macdFastLength) - ta.hma(price, macdSlowLength)
 aMacd = ta.hma(macd, macdLength)
