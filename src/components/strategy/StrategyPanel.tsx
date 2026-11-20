@@ -5,6 +5,7 @@ import type { PineHeader, PineInput, StrategyColor, StrategyResult } from "@/lib
 
 type Props = {
   assetSymbol?: string;
+  longOnly?: boolean;
   header: PineHeader;
   params: PineInput[];
   onParams: (p: PineInput[]) => void;
@@ -46,7 +47,7 @@ const fmt = (v: number, d = 2) =>
 const dt = (t: number) =>
   new Date(t * 1000).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Dublin", hourCycle: "h23" });
 
-export function StrategyPanel({ assetSymbol = "SOL", header, params, onParams, onSaveParams, paramsFilePath, colors, onColors, result, showPlots, onShowPlots, dec, onPdf }: Props) {
+export function StrategyPanel({ assetSymbol = "SOL", longOnly = false, header, params, onParams, onSaveParams, paramsFilePath, colors, onColors, result, showPlots, onShowPlots, dec, onPdf }: Props) {
   const [tab, setTab] = useState<"stats" | "trades" | "params">("stats");
   const [copied, setCopied] = useState<"ok" | "manual" | null>(null);
   const [manualText, setManualText] = useState<string | null>(null);
@@ -58,7 +59,7 @@ export function StrategyPanel({ assetSymbol = "SOL", header, params, onParams, o
     <div className="space-y-2">
       <div className="text-xs font-semibold">{header.title}</div>
       <div className="text-[11px] text-muted-foreground">
-        Kapitał {header.initialCapital} USDC · prowizja {header.commissionPct}% · spot 100% · {params.some((p) => p.name === "onlyBuy" && p.value === true) ? "tylko BUY" : params.some((p) => p.name === "onlySell" && p.value === true) ? "tylko SELL" : "BUY i SELL"}
+        Kapitał {header.initialCapital} USDC · prowizja {header.commissionPct}% · spot 100% · {longOnly || params.some((p) => p.name === "onlyBuy" && p.value === true) ? "tylko BUY" : params.some((p) => p.name === "onlySell" && p.value === true) ? "tylko SELL" : "BUY i SELL"}
       </div>
       {result && onPdf && (
         <button
@@ -199,7 +200,7 @@ export function StrategyPanel({ assetSymbol = "SOL", header, params, onParams, o
               autoFocus
             />
           )}
-          {params.map((p, idx) => (
+          {params.map((p, idx) => longOnly && p.name === "alertHold" ? null : (
             <label key={p.name} className="flex items-center gap-2 text-[11px]">
               <span className="min-w-0 flex-1 truncate text-muted-foreground" title={p.title}>
                 {p.title}

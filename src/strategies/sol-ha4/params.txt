@@ -1,0 +1,37 @@
+# Parametry strategii — podmień ten plik, aby zmienić ustawienia.
+haL1 = 45   # Wygładzenie przed HA (EMA na OHLC)
+haL2 = 15   # Wygładzenie po HA (EMA na świecach HA)
+useDaily = true   # Włącz filtr dzienny
+dL1 = 8   # Wygładzenie przed HA (dzienne)
+dL2 = 8   # Wygładzenie po HA (dzienne)
+useSL = true   # Włącz stop loss
+slAtrLen = 14   # ATR - długość
+slMult = 1.5   # Stop = wejście - k × ATR, k =
+useRange = true   # Włącz detektor boczniaka
+smoothLen = 3   # Wygładzanie wyniku [świece]
+confirmBars = 4   # Potwierdzenie zmiany reżimu [świece]
+minDwell = 32   # Minimalny czas trwania reżimu [świece]
+atrLen = 10   # ATR
+adxLen = 10   # ADX
+chopLen = 10   # Choppiness Index
+erLen = 15   # Efficiency Ratio
+bbLen = 15   # Bollinger - długość
+bbMult = 2   # Bollinger - mnożnik
+bbwLookback = 540   # Historia do percentyla szerokości BB
+slopeEmaLen = 38   # EMA do nachylenia
+slopeLen = 8   # Nachylenie EMA - okno
+rangeLen = 22   # Okno granic zakresu
+adxMax = 20   # ADX poniżej = głos za boczniakiem
+chopMin = 55   # Choppiness powyżej = głos za boczniakiem
+erMax = 0.3   # Efficiency Ratio poniżej = głos
+bbwPctMax = 0.4   # Percentyl szerokości BB poniżej = głos
+slopeMax = 0.15   # |Nachylenie EMA|/ATR poniżej = głos
+enterRange = 0.6   # Wejście w boczniak: wynik >=
+exitRange = 0.4   # Wyjście z boczniaka: wynik <=
+breakoutAtr = 1   # Wybicie z zakresu [× ATR]
+showHaBars = false   # Koloruj świece wg wygładzonego HA 4H
+showBg = true   # Podświetl tło (SOL / boczniak)
+showStop = true   # Pokaż linię stop loss
+showBounds = false   # Pokaż granice boczniaka
+showTable = true   # Pokaż tabelę statusu
+alertHold = true   # Wysyłaj 'Trzymaj SOL' co świecę

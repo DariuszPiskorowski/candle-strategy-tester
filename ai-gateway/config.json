@@ -3,7 +3,7 @@
   "mode": "tune",
   "dataDir": "../data",
   "market": { "source": "orca", "symbol": "SOLUSDC", "pool": "Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE", "provider": "GeckoTerminal", "refreshCommand": "bun scripts/fetch-orca.mjs 4h" },
-  "strategy": null,
+  "strategy": "jarvis",
   "saveBest": true,
   "candleFiles": [
     "ORCA_SOLUSDC_4h.json"

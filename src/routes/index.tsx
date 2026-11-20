@@ -627,6 +627,7 @@ function Index() {
                   ))}
                 </ul>
               )}
+              {result?.status && <div className="text-foreground">{result.status}</div>}
             </div>
           )}
           {error && (
@@ -746,6 +747,7 @@ function Index() {
               <StrategyPanel
                 key={strategy.code}
                 assetSymbol={assetSymbol}
+                longOnly={activeEngineId === "sol-ha4"}
                 header={header}
                 params={params}
                 onParams={setParams}

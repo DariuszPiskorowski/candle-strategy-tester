@@ -95,6 +95,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
       const down = "#ef5350";
       const dec = pricePrecision(candles);
       const priceFormat = { type: "price" as const, precision: dec, minMove: Math.pow(10, -dec) };
+      const candleColors = new Map(strategy?.candleColors?.map(c => [c.time, c.color]));
       let main:
         | ReturnType<typeof chart.addSeries>
         | ReturnType<typeof chart.addSeries<"Line">>;
@@ -109,7 +110,10 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           wickUpColor: up,
           wickDownColor: down,
         });
-        main.setData(candles.map((c) => ({ ...c, time: c.time })) as any);
+        main.setData(candles.map((c) => {
+          const color = candleColors.get(c.time);
+          return { ...c, time: c.time, ...(color ? { color, borderColor: color, wickColor: color } : {}) };
+        }) as any);
       } else if (chartType === "bars") {
         main = chart.addSeries(lc.BarSeries, { priceFormat, upColor: up, downColor: down });
         main.setData(candles.map((c) => ({ ...c, time: c.time })) as any);
@@ -155,7 +159,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           },
           pane,
         );
-        s.setData(data.map((point) => ({ ...point, time: point.time })) as any);
+        s.setData(data.map((point) => Number.isFinite(point.value) ? { ...point, time: point.time } : { time: point.time }) as any);
         return s;
       };
 
@@ -192,10 +196,18 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
       }
 
       if (strategy) {
+        if (showPlots && strategy.backgrounds?.length) {
+          const background = chart.addSeries(lc.HistogramSeries, {
+            priceScaleId: "regime", priceLineVisible: false, lastValueVisible: false,
+            autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 1 } }),
+          });
+          background.setData(strategy.backgrounds.map(point => ({ ...point, value: 1 })) as any);
+          chart.priceScale("regime").applyOptions({ visible: false, scaleMargins: { top: 0, bottom: 0 } });
+        }
         if (showPlots) for (const pl of strategy.plots) {
           if (!pl.data.length) continue;
-          if (pl.title.startsWith("Jarvis Stop Loss")) {
-            const side = pl.title.endsWith("(SELL)") ? "SELL" : "BUY";
+          if (pl.stopSide || pl.title.startsWith("Jarvis Stop Loss")) {
+            const side = pl.stopSide ?? (pl.title.endsWith("(SELL)") ? "SELL" : "BUY");
             const entries = strategy.trades.filter((t) => t.side === side).map((t) => t.entryTime);
             for (const segment of stopSegments(pl.data, entries)) {
               const line = addLine(segment, pl.color, 0, pl.width);
@@ -265,7 +277,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
             },
             0,
           );
-          seg.setData([
+          seg.setData(t.entryTime === t.exitTime ? [{ time: t.entryTime, value: t.exitPrice }] : [
             { time: t.entryTime, value: t.entryPrice },
             { time: t.exitTime, value: t.exitPrice },
           ] as any);

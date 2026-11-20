@@ -26,6 +26,10 @@ Parametry ryzyka (Risk per trade, Max position, exposure, reserve) nie wpływaj�
 Wpisz tę nazwę w `candleFiles` w `config.json` (pary: SUIUSDC, SOLUSDC, BNBUSDC; interwały np. 1h, 4h).
 
 ## Nowa strategia
+Silnik `sol-ha4` obsługuje SOL HA-4H z załączonej strategii: tylko kupno spot i sprzedaż posiadanych SOL (bez shortów), sygnały na zamknięciu, wykonanie na kolejnym otwarciu, ATR SL w trakcie świecy i ponowne wejście dopiero po czerwonym HA po stopie. Domyślne parametry znajdują się w jego `strategy.txt` i `params.txt`. Okres testu ustawia wspólny zakres aplikacji/config (domyślnie ostatnie cztery miesiące), nie daty `input.time` zapisane w źródle. Świece wcześniejsze rozgrzewają wskaźniki; ticki i wysyłanie alertów nie są zaimplementowane. `alertHold` jest zachowane w oryginale, ale nie uruchamia powiadomień w testerze.
+
+Obecny config strojenia wskazuje jawnie `jarvis`, żeby wcześniejsze zakresy parametrów nie trafiły do nowej aktywnej strategii. Aby przeliczyć HA-4H, ustaw `strategy: "sol-ha4"`, `mode: "evaluate"`; do strojenia najpierw zastąp `tune.parameters` nazwami z nowego pliku. Nie uruchamiać strojenia automatycznie.
+
 1. Utwórz folder `src/strategies/<id>/` z `strategy.txt` (kod strategii) i `engine.ts` (silnik zgodny z `src/strategies/types.ts`).
 2. Dopisz silnik w `src/strategies/registry.ts`.
 3. Ustaw `"active": "<id>"` w `src/strategies/active.json` (powrót do starej = wpisanie starego id).

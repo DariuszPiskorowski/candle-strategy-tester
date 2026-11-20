@@ -20,6 +20,8 @@
 - Stop plots are split into independent constant-level active intervals in the chart layer, because lightweight-charts connects across whitespace; presentation must not change engine calculations.
 
 ## Strategies
+- SOL HA-4H uses a separate spot-only engine with source-seeded EMA, Wilder RMA, completed UTC daily HA, close-generated/next-open market orders and intrabar stops; this preserves the uploaded strategy without changing Jarvis. Its test window comes from BacktestOptions (default last four months), not source input.time values, so app and CLI retain the shared date controls.
+- Strategy plots declare stopSide and optional candle colors/backgrounds/status; the chart renders these outputs without inferring trading decisions, including same-candle entry/stop exits.
 - CLI broad tuning uses seeded whole-parameter sampling followed by full-range coordinate passes with a strict unique-test budget; this explores beyond local downhill stops without changing strategy calculations.
 - Parameter defaults load from strategy source, never browser overrides; the Save control exports a .txt with current input defaults because deployed Workers cannot rewrite bundled project source files. Repository default changes require a source edit and deployment.
 - Each strategy lives in src/strategies/<id>/ (strategy.txt + engine.ts implementing StrategyEngine) and is listed in src/strategies/registry.ts; active.json picks the default, because the app and the tuning script must share one engine contract.

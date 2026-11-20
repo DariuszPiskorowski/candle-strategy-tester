@@ -1,4 +1,5 @@
 # Zadania
+- [x] Dodać i sprawdzić silnik SOL HA-4H z załącznika oraz uruchomić go na obecnym wykresie SOL/USDC.
 - [x] Uruchomić szerokie strojenie SOL/USDC Orca, zapisać najlepsze parametry i sprawdzić wyniki (5441 zestawów, 14 parametrów).
 - [x] Przełączyć domyślny wykres na SOL/USDC z podanej puli Orca, sprawdzić historię i salda.
 - [x] Wpisać parametry ze zrzutu do kodu strategii.

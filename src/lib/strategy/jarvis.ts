@@ -94,7 +94,7 @@ export function parsePineInputs(code: string): PineInput[] {
   while ((m = re.exec(code))) {
     const [, name, kind, args] = m;
     const first = args.split(",")[0].trim();
-    const title = /title\s*=\s*"([^"]*)"/.exec(args)?.[1] ?? name;
+    const title = /title\s*=\s*"([^"]*)"/.exec(args)?.[1] ?? /^\s*[^,]+,\s*"([^"]*)"/.exec(args)?.[1] ?? name;
     const step = /step\s*=\s*([\d.]+)/.exec(args)?.[1];
     let value: number | string | boolean = first.replace(/^"|"$/g, "");
     if (kind === "int" || kind === "float") value = Number(first);
@@ -105,7 +105,15 @@ export function parsePineInputs(code: string): PineInput[] {
 }
 
 export function parsePineHeader(code: string): PineHeader {
-  const line = /strategy\(([^\n]*)\)/.exec(code)?.[1] ?? "";
+  const match = /\bstrategy\s*\(/.exec(code);
+  let line = "", depth = 1, quoted = false;
+  if (match) for (let i = match.index + match[0].length; i < code.length; i++) {
+    const char = code[i];
+    if (char === '"' && code[i - 1] !== "\\") quoted = !quoted;
+    if (!quoted) { if (char === "(") depth++; if (char === ")") depth--; }
+    if (!depth) break;
+    line += char;
+  }
   return {
     title: /^\s*"([^"]*)"/.exec(line)?.[1] ?? "Strategia",
     initialCapital: Number(/initial_capital\s*=\s*([\d.]+)/.exec(line)?.[1] ?? 1000),
@@ -183,7 +191,7 @@ export type Trade = {
   bars: number;
 };
 
-export type LinePlot = { title: string; color: string; width: number; data: { time: number; value: number; color?: string }[] };
+export type LinePlot = { title: string; color: string; width: number; stopSide?: "BUY" | "SELL"; data: { time: number; value: number; color?: string }[] };
 
 export type StrategyResult = {
   trades: Trade[];
@@ -191,6 +199,9 @@ export type StrategyResult = {
   plots: LinePlot[];
   /** Read-only states on the latest tested candle, independent of plot visibility. */
   latestSignals?: IndicatorSignal[];
+  candleColors?: { time: number; color: string }[] | undefined;
+  backgrounds?: { time: number; color: string }[] | undefined;
+  status?: string | undefined;
   stats: {
     initialCapital: number;
     finalEquity: number;

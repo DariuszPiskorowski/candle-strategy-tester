@@ -1,0 +1,279 @@
+//@version=6
+// ============================================================================
+//  SOL HA-4H: Kup SOL / Trzymaj SOL / Sprzedaj SOL
+//  Interwał docelowy: 4H, para SOL/USDC (spot, all-in, bez lewara)
+//
+//  Elementy strategii:
+//   1) Wygładzony Heikin Ashi 4H (EMA na OHLC przed HA + EMA na świecach HA):
+//      kupno po zamknięciu pierwszej zielonej świecy, sprzedaż po pierwszej czerwonej.
+//   2) Detektor boczniaka (ADX, Choppiness, Efficiency Ratio, percentyl szerokości
+//      wstęg Bollingera, nachylenie EMA): w boczniaku nie kupuj, otwartą pozycję sprzedaj.
+//   3) Filtr dzienny: kupno tylko, gdy wygładzona DZIENNA świeca HA z ostatniego
+//      ZAMKNIĘTEGO dnia jest zielona (bez zaglądania w przyszłość).
+//   4) Stop loss: cena wejścia - k × ATR. Po wybiciu stopa bot czeka na NOWY sygnał
+//      (świeca HA 4H musi zmienić kolor na czerwony i z powrotem na zielony).
+//
+//  Sygnały liczone na ZAMKNIĘTEJ świecy, zlecenia wykonywane na otwarciu następnej.
+//  Stop loss działa w trakcie świecy (przy luce w dół - po cenie otwarcia).
+// ============================================================================
+strategy("SOL HA-4H (Kup / Trzymaj / Sprzedaj SOL)", shorttitle = "SOL HA4", overlay = true,
+     max_labels_count = 500,
+     initial_capital = 1000,
+     default_qty_type = strategy.percent_of_equity,
+     default_qty_value = 100,
+     commission_type = strategy.commission.percent,
+     commission_value = 0.05,
+     slippage = 0,
+     pyramiding = 0,
+     process_orders_on_close = false,
+     calc_on_every_tick = false,
+     calc_on_order_fills = false,
+     margin_long = 0)
+
+// ---------------------------------------------------------------- Okres testu
+grpD = "Okres testu strategii (UTC)"
+startTime = input.time(timestamp("01 Jan 2026 00:00 +0000"), "Początek okresu", group = grpD)
+endTime   = input.time(timestamp("31 Dec 2026 23:00 +0000"), "Koniec okresu",   group = grpD)
+
+// ---------------------------------------------------------------- Heikin Ashi 4H
+grpH = "Heikin Ashi 4H (wygładzony)"
+haL1 = input.int(45, "Wygładzenie przed HA (EMA na OHLC)", minval = 1, group = grpH)
+haL2 = input.int(15, "Wygładzenie po HA (EMA na świecach HA)", minval = 1, group = grpH)
+
+// ---------------------------------------------------------------- Filtr dzienny
+grpF = "Filtr: dzienny Heikin Ashi (wygładzony)"
+useDaily = input.bool(true, "Włącz filtr dzienny", group = grpF)
+dL1      = input.int(8, "Wygładzenie przed HA (dzienne)", minval = 1, group = grpF)
+dL2      = input.int(8, "Wygładzenie po HA (dzienne)",    minval = 1, group = grpF)
+
+// ---------------------------------------------------------------- Stop loss
+grpS = "Stop loss"
+useSL    = input.bool(true, "Włącz stop loss", group = grpS)
+slAtrLen = input.int(14, "ATR - długość", minval = 1, group = grpS)
+slMult   = input.float(1.5, "Stop = wejście - k × ATR, k =", minval = 0.1, step = 0.25, group = grpS)
+
+// ---------------------------------------------------------------- Detektor boczniaka
+grpR = "Detektor boczniaka"
+useRange    = input.bool(true, "Włącz detektor boczniaka", group = grpR)
+smoothLen   = input.int(3,  "Wygładzanie wyniku [świece]",            minval = 1, group = grpR)
+confirmBars = input.int(4,  "Potwierdzenie zmiany reżimu [świece]",   minval = 1, group = grpR)
+minDwell    = input.int(32, "Minimalny czas trwania reżimu [świece]", minval = 1, group = grpR)
+
+grpRI = "Detektor boczniaka - wskaźniki [świece]"
+atrLen      = input.int(10,  "ATR",                                  minval = 2,  group = grpRI)
+adxLen      = input.int(10,  "ADX",                                  minval = 2,  group = grpRI)
+chopLen     = input.int(10,  "Choppiness Index",                     minval = 2,  group = grpRI)
+erLen       = input.int(15,  "Efficiency Ratio",                     minval = 2,  group = grpRI)
+bbLen       = input.int(15,  "Bollinger - długość",                  minval = 2,  group = grpRI)
+bbMult      = input.float(2.0, "Bollinger - mnożnik",                minval = 0.1, group = grpRI)
+bbwLookback = input.int(540, "Historia do percentyla szerokości BB", minval = 20, group = grpRI)
+slopeEmaLen = input.int(38,  "EMA do nachylenia",                    minval = 2,  group = grpRI)
+slopeLen    = input.int(8,   "Nachylenie EMA - okno",                minval = 1,  group = grpRI)
+rangeLen    = input.int(22,  "Okno granic zakresu",                  minval = 5,  group = grpRI)
+
+grpRP = "Detektor boczniaka - progi"
+adxMax      = input.float(20.0, "ADX poniżej = głos za boczniakiem",        group = grpRP)
+chopMin     = input.float(55.0, "Choppiness powyżej = głos za boczniakiem", group = grpRP)
+erMax       = input.float(0.30, "Efficiency Ratio poniżej = głos",          group = grpRP)
+bbwPctMax   = input.float(0.40, "Percentyl szerokości BB poniżej = głos",   group = grpRP)
+slopeMax    = input.float(0.15, "|Nachylenie EMA|/ATR poniżej = głos",      group = grpRP)
+enterRange  = input.float(0.60, "Wejście w boczniak: wynik >=",             group = grpRP)
+exitRange   = input.float(0.40, "Wyjście z boczniaka: wynik <=",            group = grpRP)
+breakoutAtr = input.float(1.0,  "Wybicie z zakresu [× ATR]",                group = grpRP)
+
+// ---------------------------------------------------------------- Wygląd i alerty
+grpV = "Wygląd i alerty"
+showHaBars = input.bool(false, "Koloruj świece wg wygładzonego HA 4H", group = grpV)
+showBg     = input.bool(true,  "Podświetl tło (SOL / boczniak)",       group = grpV)
+showStop   = input.bool(true,  "Pokaż linię stop loss",                group = grpV)
+showBounds = input.bool(false, "Pokaż granice boczniaka",              group = grpV)
+showTable  = input.bool(true,  "Pokaż tabelę statusu",                 group = grpV)
+alertHold  = input.bool(true,  "Wysyłaj 'Trzymaj SOL' co świecę",      group = grpV)
+
+// ============================================================================
+//  Wygładzony Heikin Ashi (ta sama funkcja dla 4H i dla świec dziennych)
+// ============================================================================
+smoothedHaGreen(simple int l1, simple int l2) =>
+    float so = ta.ema(open,  l1)
+    float sh = ta.ema(high,  l1)
+    float sl = ta.ema(low,   l1)
+    float sc = ta.ema(close, l1)
+    float hc = (so + sh + sl + sc) / 4
+    var float ho = na
+    ho := na(ho[1]) ? (so + sc) / 2 : (ho[1] + hc[1]) / 2
+    float hoS = ta.ema(ho, l2)
+    float hcS = ta.ema(hc, l2)
+    hcS > hoS
+
+bool haGreen = smoothedHaGreen(haL1, haL2)
+
+// dzienny HA z ostatniego ZAMKNIĘTEGO dnia ([1] + lookahead_on = brak przemalowywania)
+bool dGreen = request.security(syminfo.tickerid, "D", smoothedHaGreen(dL1, dL2)[1], lookahead = barmerge.lookahead_on)
+
+// ============================================================================
+//  Detektor boczniaka
+// ============================================================================
+atrD = ta.atr(atrLen)
+[diPlus, diMinus, adx] = ta.dmi(adxLen, adxLen)
+
+trSum = math.sum(ta.tr(true), chopLen)
+hhC   = ta.highest(high, chopLen)
+llC   = ta.lowest(low, chopLen)
+chop  = hhC - llC > 0 ? 100 * math.log10(trSum / (hhC - llC)) / math.log10(chopLen) : na
+
+pathSum = math.sum(math.abs(ta.change(close)), erLen)
+er      = pathSum > 0 ? math.abs(close - close[erLen]) / pathSum : na
+
+basis  = ta.sma(close, bbLen)
+dev    = ta.stdev(close, bbLen)
+bbw    = basis != 0 ? (2 * bbMult * dev) / basis : na
+bbwPct = ta.percentrank(bbw, bbwLookback) / 100
+
+emaSl    = ta.ema(close, slopeEmaLen)
+slopeAtr = atrD > 0 ? (emaSl - emaSl[slopeLen]) / (slopeLen * atrD) : na
+
+bool  validCore = not na(adx) and not na(chop) and not na(er) and not na(slopeAtr)
+int   vAdx   = not na(adx)      and adx < adxMax                  ? 1 : 0
+int   vChop  = not na(chop)     and chop > chopMin                ? 1 : 0
+int   vEr    = not na(er)       and er < erMax                    ? 1 : 0
+int   vSlope = not na(slopeAtr) and math.abs(slopeAtr) < slopeMax ? 1 : 0
+bool  bbwOk  = not na(bbwPct)
+int   vBbw   = bbwOk and bbwPct < bbwPctMax ? 1 : 0
+float rawScore = validCore ? (vAdx + vChop + vEr + vSlope + vBbw) / (bbwOk ? 5.0 : 4.0) : na
+
+float score = na
+if smoothLen == 1
+    score := rawScore
+else
+    float s  = 0.0
+    bool  ok = true
+    for i = 0 to smoothLen - 1
+        if na(rawScore[i])
+            ok := false
+            break
+        s += rawScore[i]
+    score := ok ? s / smoothLen : na
+
+hhR = ta.highest(high, rangeLen)[1]
+llR = ta.lowest(low, rangeLen)[1]
+
+var bool  inRange = false
+var int   streak  = 0
+var int   dwell   = 0
+var float rLo     = na
+var float rHi     = na
+
+if not na(score)
+    dwell += 1
+    if inRange
+        if not na(atrD) and (close > rHi + breakoutAtr * atrD or close < rLo - breakoutAtr * atrD)
+            inRange := false
+            streak  := 0
+            dwell   := 0
+        else
+            streak := score <= exitRange ? streak + 1 : 0
+            if streak >= confirmBars and dwell >= minDwell
+                inRange := false
+                streak  := 0
+                dwell   := 0
+            else
+                rLo := math.min(rLo, low)
+                rHi := math.max(rHi, high)
+    else
+        streak := score >= enterRange ? streak + 1 : 0
+        if streak >= confirmBars and dwell >= minDwell and not na(hhR)
+            inRange := true
+            streak  := 0
+            dwell   := 0
+            rLo     := llR
+            rHi     := hhR
+
+// ============================================================================
+//  Logika transakcji
+// ============================================================================
+atrSL = ta.atr(slAtrLen)
+bool inWindow = time >= startTime and time <= endTime
+
+// czy pozycję zamknął przed chwilą stop loss?
+var bool waitFresh = false
+bool stopHit = false
+if strategy.closedtrades > strategy.closedtrades[1]
+    if strategy.closedtrades.exit_id(strategy.closedtrades - 1) == "SL"
+        stopHit   := true
+        waitFresh := true
+// po stopie: czekaj, aż świeca HA 4H przestanie być zielona (nowy sygnał)
+if waitFresh and not haGreen
+    waitFresh := false
+
+bool inPos      = strategy.position_size > 0
+bool allowDaily = not useDaily or dGreen
+bool rangeBlock = useRange and inRange
+
+bool buySig  = barstate.isconfirmed and inWindow and not inPos and haGreen and allowDaily and not rangeBlock and not waitFresh
+bool sellSig = barstate.isconfirmed and inPos and (not haGreen or rangeBlock)
+bool holdSig = barstate.isconfirmed and inPos and not sellSig
+
+var float stopPx = na
+if buySig
+    strategy.entry("SOL", strategy.long, comment = "Kup SOL", alert_message = "Kup SOL")
+    if useSL
+        stopPx := close - slMult * atrSL        // otwarcie następnej świecy ≈ to zamknięcie
+        strategy.exit("SL", "SOL", stop = stopPx, comment = "Stop SOL", alert_message = "Sprzedaj SOL (stop loss)")
+if sellSig
+    strategy.close("SOL", comment = "Sprzedaj SOL", alert_message = "Sprzedaj SOL")
+if inPos and time > endTime
+    strategy.close("SOL", comment = "Koniec okresu")
+if not inPos and not buySig
+    stopPx := na
+
+// ============================================================================
+//  Rysowanie
+// ============================================================================
+barcolor(showHaBars ? (haGreen ? color.new(color.teal, 0) : color.new(color.maroon, 0)) : na, title = "Kolor wg HA 4H")
+bgcolor(showBg and inPos ? color.new(color.green, 88) : showBg and inRange ? color.new(color.yellow, 90) : na, title = "Tło")
+bgcolor(inWindow ? na : color.new(color.gray, 85), title = "Poza okresem testu")
+
+plot(showStop and useSL ? stopPx : na, "Stop loss", color = color.new(color.red, 0), style = plot.style_linebr, linewidth = 1)
+plot(showBounds and inRange ? rHi : na, "Boczniak - góra", color = color.new(color.yellow, 20), style = plot.style_linebr)
+plot(showBounds and inRange ? rLo : na, "Boczniak - dół",  color = color.new(color.yellow, 20), style = plot.style_linebr)
+
+plotshape(buySig,  "Kup SOL",      shape.labelup,   location.belowbar, color.new(color.green, 0),  text = "Kup SOL",      textcolor = color.white, size = size.small)
+plotshape(sellSig, "Sprzedaj SOL", shape.labeldown, location.abovebar, color.new(color.red, 0),    text = "Sprzedaj SOL", textcolor = color.white, size = size.small)
+plotshape(stopHit, "Stop SOL",     shape.xcross,    location.abovebar, color.new(color.orange, 0), text = "Stop",         textcolor = color.orange, size = size.tiny)
+
+// ---------------------------------------------------------------- Tabela statusu
+var table tbl = table.new(position.top_right, 2, 7, bgcolor = color.new(color.black, 20), border_width = 1)
+if showTable and barstate.islast
+    string status = inPos ? "Trzymaj SOL" : waitFresh ? "USDC - czekam na nowy sygnał (po stopie)" : "Poza rynkiem (USDC)"
+    color  stCol  = inPos ? color.green : color.gray
+    table.cell(tbl, 0, 0, "Status",            text_color = color.white, text_size = size.small)
+    table.cell(tbl, 1, 0, status,              text_color = stCol,       text_size = size.small)
+    table.cell(tbl, 0, 1, "HA 4H",             text_color = color.white, text_size = size.small)
+    table.cell(tbl, 1, 1, haGreen ? "zielona" : "czerwona", text_color = haGreen ? color.green : color.red, text_size = size.small)
+    table.cell(tbl, 0, 2, "HA dzienny (wczoraj)", text_color = color.white, text_size = size.small)
+    table.cell(tbl, 1, 2, not useDaily ? "wyłączony" : dGreen ? "zielona - wolno kupić" : "czerwona - nie kupuj", text_color = not useDaily ? color.gray : dGreen ? color.green : color.red, text_size = size.small)
+    table.cell(tbl, 0, 3, "Boczniak",          text_color = color.white, text_size = size.small)
+    table.cell(tbl, 1, 3, not useRange ? "wyłączony" : inRange ? "TAK - nie kupuj" : "nie", text_color = inRange ? color.yellow : color.white, text_size = size.small)
+    table.cell(tbl, 0, 4, "Wynik boczniaka",   text_color = color.white, text_size = size.small)
+    table.cell(tbl, 1, 4, na(score) ? "-" : str.tostring(score, "#.##"), text_color = color.white, text_size = size.small)
+    table.cell(tbl, 0, 5, "Stop loss",         text_color = color.white, text_size = size.small)
+    table.cell(tbl, 1, 5, inPos and useSL and not na(stopPx) ? str.tostring(stopPx, format.mintick) : "-", text_color = color.white, text_size = size.small)
+    table.cell(tbl, 0, 6, "Interwał",          text_color = color.white, text_size = size.small)
+    table.cell(tbl, 1, 6, timeframe.period == "240" ? "4H ✓" : timeframe.period + " (ustawienia dobrane pod 4H!)", text_color = timeframe.period == "240" ? color.white : color.orange, text_size = size.small)
+
+// ---------------------------------------------------------------- Alerty
+// Alert: Warunek -> SOL HA4 -> "Wywołania funkcji alert()".
+// Stop loss zadziałał w trakcie świecy - komunikat przychodzi po jej zamknięciu.
+// Natychmiastowy alert przy wybiciu stopa: Warunek -> SOL HA4 -> "Wypełnienia zleceń"
+// (komunikat {{strategy.order.alert_message}} = "Sprzedaj SOL (stop loss)").
+if barstate.isconfirmed
+    string px = str.tostring(close, format.mintick)
+    if buySig
+        string st = useSL ? " | stop " + str.tostring(close - slMult * atrSL, format.mintick) : ""
+        alert("Kup SOL | " + syminfo.ticker + " | cena " + px + st, alert.freq_once_per_bar_close)
+    else if sellSig
+        alert("Sprzedaj SOL | " + syminfo.ticker + " | cena " + px, alert.freq_once_per_bar_close)
+    else if stopHit
+        alert("Sprzedaj SOL (zadziałał stop loss) | " + syminfo.ticker + " | cena " + px, alert.freq_once_per_bar_close)
+    else if holdSig and alertHold
+        alert("Trzymaj SOL | " + syminfo.ticker + " | cena " + px + (useSL and not na(stopPx) ? " | stop " + str.tostring(stopPx, format.mintick) : ""), alert.freq_once_per_bar_close)
