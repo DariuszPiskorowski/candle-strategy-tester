@@ -107,7 +107,7 @@ export function runSolHa4LS(candles: Candle[], p: Record<string, number|string|b
       {name:'HA 4H — SELL',signal:j<0?'BRAK DANYCH':greenS[j]?'BUY':'SELL'},
       ...(bool('useDayL',true)?[{name:'HA dzienny — BUY',signal:j<0||dayL[j]===undefined?'BRAK DANYCH' as const:dayL[j]?'BUY' as const:'SELL' as const}]:[]),
       ...(bool('useDayS',true)?[{name:'HA dzienny — SELL',signal:j<0||dayS[j]===undefined?'BRAK DANYCH' as const:dayS[j]?'BUY' as const:'SELL' as const}]:[])]:[],
-    backgrounds:bool('showBg',true)?candles.map(c=>({time:c.time,color:trades.some(t=>t.side==='BUY'&&c.time>=t.entryTime&&(t.exitReason==='Otwarta'||c.time<t.exitTime))?'rgba(8,153,129,0.12)':trades.some(t=>t.side==='SELL'&&c.time>=t.entryTime&&(t.exitReason==='Otwarta'||c.time<t.exitTime))?'rgba(242,54,69,0.12)':'transparent'})):undefined,
+    backgrounds:bool('showBg',true)?candles.map((c,i)=>({time:c.time,color:trades.some(t=>t.side==='BUY'&&c.time>=t.entryTime&&(t.exitReason==='Otwarta'||c.time<t.exitTime))?'rgba(8,153,129,0.12)':trades.some(t=>t.side==='SELL'&&c.time>=t.entryTime&&(t.exitReason==='Otwarta'||c.time<t.exitTime))?'rgba(242,54,69,0.12)':(bool('useRngL',true)&&rangeL.inRange[i])||(bool('useRngS',true)&&rangeS.inRange[i])?'rgba(255,193,7,0.10)':'transparent'})):undefined,
   };
 }
 const engine:StrategyEngine={id:'sol-ha4-ls',name:'SOL HA-4H BUY + SELL (1,5×)',detect:code=>/smoothedHaGreen\s*\(/.test(code)&&/\bgoShort\b/.test(code)&&/\bexchLev\b/.test(code),parseColors:()=>[{key:'stop',title:'Stop loss',value:'#ff9800'}],run:runSolHa4LS};
