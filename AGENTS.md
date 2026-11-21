@@ -27,3 +27,6 @@
 - Each strategy lives in src/strategies/<id>/ (strategy.txt + engine.ts implementing StrategyEngine) and is listed in src/strategies/registry.ts; active.json picks the default, because the app and the tuning script must share one engine contract.
 - Current parameter values live in src/strategies/<id>/params.txt (name = value) applied over strategy.txt defaults by the app and the tuner; the tuner writes it in place, the app's Save button only copies its content to the clipboard (never a download), because the Lovable preview and published site run on Workers with no writable project files.
 - __root has an inline boot watchdog (reloads up to 3x if the app hasn't hydrated in 15 s) and vite optimizeDeps pre-bundles dynamically imported libs, because cold dev-server starts left the preview stuck on "Ładowanie wykresu…" with 0 candles.
+
+- Hyperliquid SOL perpetual uses its own client-side candle adapter with six-month coverage validation; never substitute Orca/Binance or treat spot holdings as perpetual collateral.
+- SOL HA-4H L+S has its own engine, source-sized next-open orders, separate HA/range states and one USDC collateral account; funding is omitted per source and cross liquidation uses explicitly approximate OHLC/current SOL maintenance tiers, not historical mark prices.

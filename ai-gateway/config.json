@@ -1,12 +1,17 @@
 {
   "_info": "Plik sterujacy dla zewnetrznego AI. Sciezki wzgledne licza sie od tego folderu. Daty w UTC (RRRR-MM-DD). Swiece sprzed testStart sluza tylko do rozgrzewki wskaznikow (wgrywaj ~6 mies. danych). testStart: null = 4 miesiace wstecz od teraz. testEnd: null = teraz (biezaca data i godzina).",
-  "mode": "tune",
+  "mode": "evaluate",
   "dataDir": "../data",
-  "market": { "source": "orca", "symbol": "SOLUSDC", "pool": "Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE", "provider": "GeckoTerminal", "refreshCommand": "bun scripts/fetch-orca.mjs 4h" },
-  "strategy": "jarvis",
+  "market": {
+    "source": "hyperliquid",
+    "symbol": "SOL",
+    "provider": "Hyperliquid",
+    "refreshCommand": "bun scripts/fetch-hyperliquid.mjs 4h"
+  },
+  "strategy": "sol-ha4-ls",
   "saveBest": true,
   "candleFiles": [
-    "ORCA_SOLUSDC_4h.json"
+    "HL_SOL_4h.json"
   ],
   "testStart": null,
   "testEnd": null,
@@ -21,90 +26,7 @@
     "randomTests": 6000,
     "maxTests": 12000,
     "maxPasses": 12,
-    "parameters": [
-      {
-        "name": "period",
-        "step": 1,
-        "min": 2,
-        "max": 60
-      },
-      {
-        "name": "conversionPeriod",
-        "step": 1,
-        "min": 1,
-        "max": 40
-      },
-      {
-        "name": "basePeriod",
-        "step": 1,
-        "min": 2,
-        "max": 80
-      },
-      {
-        "name": "laggingSpanPeriod",
-        "step": 1,
-        "min": 1,
-        "max": 60
-      },
-      {
-        "name": "displacement",
-        "step": 1,
-        "min": 1,
-        "max": 40
-      },
-      {
-        "name": "macdFastLength",
-        "step": 1,
-        "min": 2,
-        "max": 40
-      },
-      {
-        "name": "macdSlowLength",
-        "step": 1,
-        "min": 5,
-        "max": 90
-      },
-      {
-        "name": "macdLength",
-        "step": 1,
-        "min": 2,
-        "max": 40
-      },
-      {
-        "name": "swingLookback",
-        "step": 1,
-        "min": 1,
-        "max": 60
-      },
-      {
-        "name": "swingBuffer",
-        "step": 0.05,
-        "min": -5,
-        "max": 3
-      },
-      {
-        "name": "useSidewaysFilter",
-        "bool": true
-      },
-      {
-        "name": "sidewaysLookback",
-        "step": 1,
-        "min": 2,
-        "max": 40
-      },
-      {
-        "name": "sidewaysMaxRangePct",
-        "step": 1,
-        "min": 1,
-        "max": 15
-      },
-      {
-        "name": "sidewaysMaxAvgBodyPct",
-        "step": 1,
-        "min": 1,
-        "max": 8
-      }
-    ]
+    "parameters": []
   },
   "resultsFile": "results.json"
 }

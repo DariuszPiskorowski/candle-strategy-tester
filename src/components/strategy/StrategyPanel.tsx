@@ -6,6 +6,7 @@ import type { PineHeader, PineInput, StrategyColor, StrategyResult } from "@/lib
 type Props = {
   assetSymbol?: string;
   longOnly?: boolean;
+  leveraged?: boolean;
   header: PineHeader;
   params: PineInput[];
   onParams: (p: PineInput[]) => void;
@@ -47,7 +48,7 @@ const fmt = (v: number, d = 2) =>
 const dt = (t: number) =>
   new Date(t * 1000).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Dublin", hourCycle: "h23" });
 
-export function StrategyPanel({ assetSymbol = "SOL", longOnly = false, header, params, onParams, onSaveParams, paramsFilePath, colors, onColors, result, showPlots, onShowPlots, dec, onPdf }: Props) {
+export function StrategyPanel({ assetSymbol = "SOL", longOnly = false, leveraged = false, header, params, onParams, onSaveParams, paramsFilePath, colors, onColors, result, showPlots, onShowPlots, dec, onPdf }: Props) {
   const [tab, setTab] = useState<"stats" | "trades" | "params">("stats");
   const [copied, setCopied] = useState<"ok" | "manual" | null>(null);
   const [manualText, setManualText] = useState<string | null>(null);
@@ -59,8 +60,9 @@ export function StrategyPanel({ assetSymbol = "SOL", longOnly = false, header, p
     <div className="space-y-2">
       <div className="text-xs font-semibold">{header.title}</div>
       <div className="text-[11px] text-muted-foreground">
-        Kapitał {header.initialCapital} USDC · prowizja {header.commissionPct}% · spot 100% · {longOnly || params.some((p) => p.name === "onlyBuy" && p.value === true) ? "tylko BUY" : params.some((p) => p.name === "onlySell" && p.value === true) ? "tylko SELL" : "BUY i SELL"}
+        Kapitał {header.initialCapital} USDC · prowizja {header.commissionPct}% · {leveraged ? `perpetual · cross · giełda ${params.find(p => p.name === "exchLev")?.value}× · ekspozycja BUY ${params.find(p => p.name === "targetL")?.value}× / SELL ${params.find(p => p.name === "targetS")?.value}×` : "spot 100%"} · {leveraged ? [params.some(p => p.name === "useLong" && p.value === true) ? "BUY" : "", params.some(p => p.name === "useShort" && p.value === true) ? "SELL" : ""].filter(Boolean).join(" i ") || "handel wyłączony" : longOnly || params.some((p) => p.name === "onlyBuy" && p.value === true) ? "tylko BUY" : params.some((p) => p.name === "onlySell" && p.value === true) ? "tylko SELL" : "BUY i SELL"}
       </div>
+      {leveraged && <p className="text-[11px] text-muted-foreground">Funding pominięty · SL i likwidacja: przybliżenie OHLC, bez historycznej ceny mark.</p>}
       {result && onPdf && (
         <button
           className="tv-btn w-full"
@@ -131,12 +133,20 @@ export function StrategyPanel({ assetSymbol = "SOL", longOnly = false, header, p
               ["Maks. obsunięcie", `${fmt(s.maxDrawdown)} USD (${fmt(s.maxDrawdownPct)}%)`, -1],
               ["DD — ostrożna granica OHLC", `${fmt(s.maxIntrabarDrawdownPct)}%`, -1],
               ["Prowizje", `${fmt(s.commission)} USD`],
-              ["Stan portfela", s.positionSide === "BUY" ? `BUY otwarta — trzymamy ${assetSymbol}` : s.positionSide === "SELL" ? "SELL otwarta — trzymamy USDC" : "Bez pozycji — trzymamy USDC"],
+              ["Stan portfela", leveraged ? s.positionSide ? `${s.positionSide} SOL — kontrakt` : "Bez pozycji — USDC" : s.positionSide === "BUY" ? `BUY otwarta — trzymamy ${assetSymbol}` : s.positionSide === "SELL" ? "SELL otwarta — trzymamy USDC" : "Bez pozycji — trzymamy USDC"],
               ["Saldo USDC", `${fmt(s.usdcBalance)} USDC`],
-              [`Saldo ${assetSymbol}`, s.suiBalance > 0 ? `${fmt(s.suiBalance, 4)} ${assetSymbol} (≈ ${fmt(s.suiValueUsdc)} USDC)` : `0 ${assetSymbol}`],
+              [leveraged ? "Saldo SOL (spot)" : `Saldo ${assetSymbol}`, s.suiBalance > 0 ? `${fmt(s.suiBalance, 4)} ${assetSymbol} (≈ ${fmt(s.suiValueUsdc)} USDC)` : `0 ${assetSymbol}`],
               ["Razem w USDC", `${fmt(s.totalUsdc)} USD`, s.totalUsdc - s.initialCapital],
+              ...(result.derivatives ? [
+                ["Pozycja SOL", `${fmt(result.derivatives.positionQty, 2)} SOL`],
+                ["Wartość pozycji", `${fmt(result.derivatives.positionValue)} USDC`],
+                ["Depozyt wymagany", `${fmt(result.derivatives.marginUsed)} USDC`],
+                ["Niezrealizowany P/L", `${fmt(result.derivatives.unrealizedPnl)} USDC`, result.derivatives.unrealizedPnl],
+                ["Likwidacja (szacunek)", Number.isFinite(result.derivatives.liquidationPrice) ? fmt(result.derivatives.liquidationPrice, dec) : "—"],
+                ["Likwidacje (szacunek)", `${result.derivatives.liquidations}`],
+              ] : []),
               ["Śr. długość", `${fmt(s.avgBars, 1)} świec`],
-              ["Wyjścia SELL / SL", `${s.signalExits} / ${s.stopExits}`],
+              [leveraged ? "Wyjścia sygnał / SL" : "Wyjścia SELL / SL", `${s.signalExits} / ${s.stopExits}`],
             ] as [string, string, number?][]
           ).map(([k, v, sign]) => (
             <div key={k} className="flex justify-between gap-2 border-b border-border/50 py-0.5">
@@ -201,7 +211,9 @@ export function StrategyPanel({ assetSymbol = "SOL", longOnly = false, header, p
             />
           )}
           {params.map((p, idx) => longOnly && p.name === "alertHold" ? null : (
-            <label key={p.name} className="flex items-center gap-2 text-[11px]">
+            <div key={p.name}>
+            {leveraged && (p.name === "useLong" || p.name === "useShort" || p.name === "slAtrLen") && <div className="tv-h mb-1 border-t border-border pt-2">{p.name === "useLong" ? "BUY — ustawienia" : p.name === "useShort" ? "SELL — ustawienia" : "Wspólne ustawienia"}</div>}
+            <label className="flex items-center gap-2 text-[11px]">
               <span className="min-w-0 flex-1 truncate text-muted-foreground" title={p.title}>
                 {p.title}
               </span>
@@ -235,6 +247,7 @@ export function StrategyPanel({ assetSymbol = "SOL", longOnly = false, header, p
                 />
               )}
             </label>
+            </div>
           ))}
           <div className="pt-2">
             <div className="tv-h mb-1.5 border-t border-border pt-2">Kolory</div>

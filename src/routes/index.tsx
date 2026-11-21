@@ -17,6 +17,7 @@ import { aggregate, detectInterval, parseCandles, TIMEFRAMES, type Candle } from
 import { ACTIVE_STRATEGY_ID, ENGINES, detectEngine, getEngine } from "@/strategies/registry";
 import { STRATEGY_SOURCES } from "@/strategies/sources";
 import { BINANCE_INTERVALS, BINANCE_PAIRS, fetchHistory, fetchLatest } from "@/lib/binance";
+import { HYPERLIQUID_MARKET, HYPERLIQUID_INTERVALS, fetchHyperliquidHistory, fetchHyperliquidLatest } from "@/lib/hyperliquid";
 import { ORCA_POOL, ORCA_INTERVALS, fetchOrcaHistory, fetchOrcaLatest } from "@/lib/orca";
 
 export const Route = createFileRoute("/")({
@@ -71,7 +72,7 @@ function Index() {
   const [indMenuOpen, setIndMenuOpen] = useState(false);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [bnPair, setBnPair] = useState<string>("ORCA_SOLUSDC");
+  const [bnPair, setBnPair] = useState<string>(HYPERLIQUID_MARKET);
   const [assetSymbol, setAssetSymbol] = useState("SOL");
   const [bnInterval, setBnInterval] = useState<string>("4h");
   const [bnLoading, setBnLoading] = useState(false);
@@ -111,7 +112,7 @@ function Index() {
     };
   }, [indMenuOpen]);
 
-  // Start: SOL/USDC z konkretnej puli Orca; bez zastępowania cenami Binance.
+  // Start: SOL perpetual z Hyperliquid; nigdy nie zastępuj cen innym rynkiem.
   useEffect(() => {
     void loadBinance();
     const id = window.setInterval(() => {
@@ -221,11 +222,12 @@ function Index() {
     setBnLoading(true);
     try {
       const isOrca = bnPair === "ORCA_SOLUSDC";
-      const list = isOrca ? await fetchOrcaHistory(bnInterval, 6) : await fetchHistory(bnPair, bnInterval, 6);
+      const isHL = bnPair === HYPERLIQUID_MARKET;
+      const list = isHL ? await fetchHyperliquidHistory(bnInterval, 6) : isOrca ? await fetchOrcaHistory(bnInterval, 6) : await fetchHistory(bnPair, bnInterval, 6);
       if (!list.length) throw new Error("Źródło nie zwróciło świec.");
       setRaw(list);
-      setAssetSymbol(isOrca ? "SOL" : bnPair.replace("USDC", ""));
-      setFileName(isOrca ? `Orca SOL/USDC ${bnInterval} · GeckoTerminal` : `Binance ${bnPair} ${bnInterval}`);
+      setAssetSymbol(isHL || isOrca ? "SOL" : bnPair.replace("USDC", ""));
+      setFileName(isHL ? `Hyperliquid SOL perpetual ${bnInterval}` : isOrca ? `Orca SOL/USDC ${bnInterval} · GeckoTerminal` : `Binance ${bnPair} ${bnInterval}`);
       setTf(null);
       setFromDate("");
       setToDate("");
@@ -245,7 +247,9 @@ function Index() {
       const cur0 = rawRef.current;
       if (!cur0.length) return;
       try {
-        const latest = liveSrc.pair === "ORCA_SOLUSDC"
+        const latest = liveSrc.pair === HYPERLIQUID_MARKET
+          ? await fetchHyperliquidLatest(liveSrc.interval, cur0[cur0.length - 1].time * 1000)
+          : liveSrc.pair === "ORCA_SOLUSDC"
           ? await fetchOrcaLatest(liveSrc.interval, cur0[cur0.length - 1].time * 1000)
           : await fetchLatest(liveSrc.pair, liveSrc.interval, cur0[cur0.length - 1].time * 1000);
         if (stop) return;
@@ -311,7 +315,7 @@ function Index() {
       }}
     >
       {/* Top bar */}
-      <header className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
+      <header className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-border px-3 py-2 max-sm:[&>*]:shrink-0">
         <button className="tv-btn" onClick={() => inputRef.current?.click()}>
           Wczytaj plik
         </button>
@@ -350,8 +354,10 @@ function Index() {
         <select aria-label="Rynek" className="tv-btn px-1.5 py-0.5 text-xs" value={bnPair} onChange={(e) => {
           setBnPair(e.target.value);
           setLiveSrc(null);
+          if (e.target.value === HYPERLIQUID_MARKET && !HYPERLIQUID_INTERVALS.some((i) => i === bnInterval)) setBnInterval("4h");
           if (e.target.value === "ORCA_SOLUSDC" && !ORCA_INTERVALS.some((i) => i === bnInterval)) setBnInterval("4h");
         }}>
+          <option value={HYPERLIQUID_MARKET}>SOL perpetual · Hyperliquid</option>
           <option value="ORCA_SOLUSDC">SOL/USDC · Orca</option>
           {BINANCE_PAIRS.map((p) => (
             <option key={p} value={p}>{p.replace("USDC", "/USDC")} · Binance</option>
@@ -366,12 +372,12 @@ function Index() {
             setLiveSrc(null);
           }}
         >
-          {(bnPair === "ORCA_SOLUSDC" ? ORCA_INTERVALS : BINANCE_INTERVALS).map((i) => (
+          {(bnPair === HYPERLIQUID_MARKET ? HYPERLIQUID_INTERVALS : bnPair === "ORCA_SOLUSDC" ? ORCA_INTERVALS : BINANCE_INTERVALS).map((i) => (
             <option key={i} value={i}>{i.toUpperCase()}</option>
           ))}
         </select>
         <Button variant="outline" size="sm" className="tv-btn" disabled={bnLoading} onClick={() => void loadBinance()}>
-          {bnLoading ? "Pobieram…" : bnPair === "ORCA_SOLUSDC" ? "Pobierz z Orca" : "Pobierz z Binance"}
+          {bnLoading ? "Pobieram…" : bnPair === HYPERLIQUID_MARKET ? "Pobierz z Hyperliquid" : bnPair === "ORCA_SOLUSDC" ? "Pobierz z Orca" : "Pobierz z Binance"}
         </Button>
         <label className={`flex items-center gap-1 text-xs ${liveSrc ? "" : "opacity-50"}`} title={liveSrc?.pair === "ORCA_SOLUSDC" ? "Dane puli przez GeckoTerminal; dostawca może opóźniać aktualizację około minuty." : "Aktualizuje cenę bieżącej świecy co 15 s (interwał zostaje bez zmian)"}>
           <input type="checkbox" className="tv-check" disabled={!liveSrc} checked={live && !!liveSrc} onChange={(e) => setLive(e.target.checked)} />
@@ -584,11 +590,11 @@ function Index() {
         </button>
       </header>
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 max-sm:flex-col max-sm:overflow-y-auto">
         {/* Chart area */}
-        <main className="relative min-w-0 flex-1">
+        <main className="relative min-w-0 flex-1 max-sm:min-h-[560px] max-sm:shrink-0">
           {last && (
-            <div className="pointer-events-none absolute left-3 top-2 z-10 flex flex-wrap items-center gap-3 font-mono text-xs">
+            <div className="pointer-events-none absolute left-3 top-2 z-10 flex flex-wrap items-center gap-3 font-mono text-xs max-sm:right-[74px] max-sm:gap-1.5">
               <span className="text-muted-foreground">
                 O <span className="text-foreground">{last.open.toFixed(dec)}</span>
               </span>
@@ -611,7 +617,7 @@ function Index() {
             </div>
           )}
           {(showCountdown || !!result?.latestSignals?.length) && (
-            <div className="pointer-events-none absolute right-[74px] top-8 z-10 max-w-[calc(100%-5.5rem)] bg-card/90 px-2 py-1 text-right font-mono text-xs sm:top-2">
+            <div className="pointer-events-none absolute right-[74px] top-16 z-10 max-w-[calc(100%-5.5rem)] bg-card/90 px-2 py-1 text-right font-mono text-xs sm:top-2">
               {showCountdown && (
                 <div className="mb-1 whitespace-nowrap">
                   <span className="text-muted-foreground">Zamknięcie za </span>
@@ -654,7 +660,7 @@ function Index() {
         </main>
 
         {/* Right panel */}
-        <aside className="w-[340px] shrink-0 space-y-4 overflow-y-auto border-l border-border p-3">
+        <aside className="w-[340px] shrink-0 space-y-4 overflow-y-auto border-l border-border p-3 max-sm:w-full max-sm:overflow-visible max-sm:border-l-0 max-sm:border-t">
           <section className="space-y-2">
             <div className="flex items-center gap-2">
               <h2 className="tv-h">Strategia</h2>
@@ -748,6 +754,7 @@ function Index() {
                 key={strategy.code}
                 assetSymbol={assetSymbol}
                 longOnly={activeEngineId === "sol-ha4"}
+                leveraged={activeEngineId === "sol-ha4-ls"}
                 header={header}
                 params={params}
                 onParams={setParams}

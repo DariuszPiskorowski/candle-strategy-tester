@@ -101,8 +101,9 @@ export function rangeDetector(candles: Candle[], p: Record<string, number | stri
     const slopeLen = len("slopeLen", 8);
     const slope = i >= slopeLen && atr[i] > 0 ? (slopeEma[i] - slopeEma[i - slopeLen]) / (slopeLen * atr[i]) : NaN;
     const valid = [adx[i], chop, er, slope].every(Number.isFinite);
-    const votes = Number(adx[i] < num("adxMax", 20)) + Number(chop > num("chopMin", 55)) + Number(er < num("erMax", 0.3)) + Number(Math.abs(slope) < num("slopeMax", 0.15)) + Number(Number.isFinite(rank) && rank < num("bbwPctMax", 0.4));
-    raw.push(valid ? votes / (Number.isFinite(rank) ? 5 : 4) : NaN);
+    const bbwOk = p["useBbw"] !== false && Number.isFinite(rank);
+    const votes = Number(adx[i] < num("adxMax", 20)) + Number(chop > num("chopMin", 55)) + Number(er < num("erMax", 0.3)) + Number(Math.abs(slope) < num("slopeMax", 0.15)) + Number(bbwOk && rank < num("bbwPctMax", 0.4));
+    raw.push(valid ? votes / (bbwOk ? 5 : 4) : NaN);
     const smooth = len("smoothLen", 3), recent = raw.slice(Math.max(0, i - smooth + 1), i + 1);
     const s = recent.length === smooth && recent.every(Number.isFinite) ? recent.reduce((a, b) => a + b, 0) / smooth : NaN;
     score.push(s);

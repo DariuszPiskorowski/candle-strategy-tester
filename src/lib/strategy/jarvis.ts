@@ -184,7 +184,7 @@ export type Trade = {
   qty: number;
   notional: number;
   stop: number;
-  exitReason: "Strategy SELL" | "Strategy BUY" | "STOP_LOSS" | "Otwarta";
+  exitReason: "Strategy SELL" | "Strategy BUY" | "STOP_LOSS" | "LIQUIDATION" | "Otwarta";
   pnl: number;
   pnlPct: number;
   commission: number;
@@ -202,6 +202,11 @@ export type StrategyResult = {
   candleColors?: { time: number; color: string }[] | undefined;
   backgrounds?: { time: number; color: string }[] | undefined;
   status?: string | undefined;
+  derivatives?: {
+    exchangeLeverage: number; targetLong: number; targetShort: number; marginMode: "cross" | "isolated";
+    positionQty: number; positionValue: number; marginUsed: number; unrealizedPnl: number;
+    liquidationPrice: number; liquidations: number; fundingIncluded: boolean;
+  };
   stats: {
     initialCapital: number;
     finalEquity: number;
