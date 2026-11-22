@@ -102,8 +102,9 @@ export function runSolHa4LS(candles: Candle[], p: Record<string, number|string|b
     for(const [name,on,r,dw,cf] of [['BUY',bool('useRngL',true),rangeL,len('dwellL',32),len('confL',4)],['SELL',bool('useRngS',true),rangeS,len('dwellS',36),len('confS',4)]] as const) {
       if(!on||!r.inRange[j])continue;
       let s0=j; while(s0>0&&r.inRange[s0-1])s0--;
-      const left=Math.max(dw-r.dwells[j],cf-r.streaks[j],1);
-      const endT=candles[j].time+left*interval;
+      // Max bars left: finish the dwell, then a fresh weak streak. A breakout ends it sooner, a resetting streak can extend it.
+      const left=Math.max(dw-r.dwells[j],0)+Math.max(cf-r.streaks[j],0);
+      const endT=candles[j].time+Math.max(left,1)*interval;
       // The counter sits above the upper bound line, never above the candles.
       const levels: [number, 'upper' | 'lower'][] = [[r.upper[j], 'upper'], [r.lower[j], 'lower']];
       for(const [lvl,kind] of levels) {
@@ -111,7 +112,7 @@ export function runSolHa4LS(candles: Candle[], p: Record<string, number|string|b
         for(let k=s0;k<candles.length;k++)data.push({time:candles[k].time,value:lvl});
         for(let t=last0.time+interval;t<=endT;t+=interval)data.push({time:t,value:lvl});
         plots.push({title:`Boczniak ${name}`,color:'rgba(255,193,7,0.9)',width:1,data,
-          ...(kind==='upper'?{marker:{time:last0.time,text:`Boczniak ${name}: trwa ${j-s0+1} św., min. ${left} św.`}}:{})});
+          ...(kind==='upper'?{marker:{time:last0.time,text:`Boczniak ${name}: trwa ${j-s0+1} św., zostało max ${left} św.`}}:{})});
       }
     }
   }
