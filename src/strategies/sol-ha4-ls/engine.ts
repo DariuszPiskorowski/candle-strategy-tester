@@ -111,7 +111,7 @@ export function runSolHa4LS(candles: Candle[], p: Record<string, number|string|b
         for(let k=s0;k<candles.length;k++)data.push({time:candles[k].time,value:lvl});
         for(let t=last0.time+interval;t<=endT;t+=interval)data.push({time:t,value:lvl});
         plots.push({title:`Boczniak ${name}`,color:'rgba(255,193,7,0.9)',width:1,data,
-          ...(kind==='upper'?{marker:{time:last0.time,text:`Boczniak ${name}: min. ${left} św.`}}:{})});
+          ...(kind==='upper'?{marker:{time:last0.time,text:`Boczniak ${name}: trwa ${j-s0+1} św., min. ${left} św.`}}:{})});
       }
     }
   }
