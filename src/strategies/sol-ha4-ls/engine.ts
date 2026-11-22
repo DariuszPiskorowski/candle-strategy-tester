@@ -102,8 +102,8 @@ export function runSolHa4LS(candles: Candle[], p: Record<string, number|string|b
     for(const [name,on,r,dw,cf] of [['BUY',bool('useRngL',true),rangeL,len('dwellL',32),len('confL',4)],['SELL',bool('useRngS',true),rangeS,len('dwellS',36),len('confS',4)]] as const) {
       if(!on||!r.inRange[j])continue;
       let s0=j; while(s0>0&&r.inRange[s0-1])s0--;
-      // Max bars left: finish the dwell, then a fresh weak streak. A breakout ends it sooner, a resetting streak can extend it.
-      const left=Math.max(dw-r.dwells[j],0)+Math.max(cf-r.streaks[j],0);
+      // Max bars left: finish the dwell, then a fresh weak streak. The first range candle is counted by "trwa", not by dwell, hence the -1.
+      const left=Math.max(dw-r.dwells[j]-1,0)+Math.max(cf-r.streaks[j],0);
       const endT=candles[j].time+Math.max(left,1)*interval;
       // The counter sits above the upper bound line, never above the candles.
       const levels: [number, 'upper' | 'lower'][] = [[r.upper[j], 'upper'], [r.lower[j], 'lower']];
