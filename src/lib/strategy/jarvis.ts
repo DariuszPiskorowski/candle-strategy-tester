@@ -191,7 +191,15 @@ export type Trade = {
   bars: number;
 };
 
-export type LinePlot = { title: string; color: string; width: number; stopSide?: "BUY" | "SELL"; data: { time: number; value: number; color?: string }[] };
+export type LinePlot = {
+  title: string;
+  color: string;
+  width: number;
+  stopSide?: "BUY" | "SELL";
+  /** Presentation only: label drawn just above this plot's own line (e.g. remaining range-filter bars). */
+  marker?: { time: number; text: string };
+  data: { time: number; value: number; color?: string }[];
+};
 
 export type StrategyResult = {
   trades: Trade[];
@@ -202,8 +210,6 @@ export type StrategyResult = {
   candleColors?: { time: number; color: string }[] | undefined;
   backgrounds?: { time: number; color: string }[] | undefined;
   status?: string | undefined;
-  /** Presentation only: label above the newest candle (e.g. remaining range-filter bars). */
-  rangeCounter?: { time: number; text: string } | undefined;
   derivatives?: {
     exchangeLeverage: number; targetLong: number; targetShort: number; marginMode: "cross" | "isolated";
     positionQty: number; positionValue: number; marginUsed: number; unrealizedPnl: number;

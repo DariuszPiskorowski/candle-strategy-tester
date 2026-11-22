@@ -195,6 +195,10 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
         pane++;
       }
 
+      // Range labels sit above the bound line as an overlay, right-aligned so the text never runs off the chart.
+      const rangeLabels: { series: any; time: number; value: number; text: string }[] = [];
+      const labelCleanups: (() => void)[] = [];
+
       if (strategy) {
         if (showPlots && strategy.backgrounds?.length) {
           const background = chart.addSeries(lc.HistogramSeries, {
@@ -214,7 +218,13 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
               line.applyOptions({ crosshairMarkerVisible: false, pointMarkersVisible: segment.length === 1, pointMarkersRadius: 1 });
             }
           } else {
-            addLine(pl.data, pl.color, 0, pl.width);
+            const line = addLine(pl.data, pl.color, 0, pl.width);
+            // The range counter belongs to the bound line itself, not to the candles.
+            if (pl.marker) {
+              const mk = pl.marker;
+              const pt = pl.data.find((d) => d.time === mk.time);
+              if (pt) rangeLabels.push({ series: line, time: mk.time, value: pt.value, text: mk.text });
+            }
           }
         }
         const markers = strategy.trades
@@ -259,7 +269,6 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
                       },
                 ]),
           ])
-          .concat(strategy.rangeCounter ? [{ time: strategy.rangeCounter.time, position: "aboveBar" as const, color: "#ffc107", shape: "circle" as const, size: 0.5, text: strategy.rangeCounter.text }] as any : [])
           .sort((a, b) => a.time - b.time);
         lc.createSeriesMarkers(main, markers.map((m) => ({ ...m, time: m.time })) as any);
         for (const t of strategy.trades) {
@@ -332,7 +341,33 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
       }
       prevCandlesRef.current = candles;
 
+      // Draw the range counter just above its bound line, ending at the newest candle so it cannot be clipped.
+      const labelHost = el.querySelector("canvas")?.parentElement ?? el;
+      for (const m of rangeLabels) {
+        const div = document.createElement("div");
+        div.textContent = m.text;
+        div.style.cssText = `position:absolute;pointer-events:none;white-space:nowrap;font:600 11px 'IBM Plex Sans',system-ui,sans-serif;color:${isDark ? "#ffc107" : "#8a5a00"};text-shadow:0 1px 3px ${isDark ? "rgba(0,0,0,.9)" : "rgba(255,255,255,.9)"}`;
+        labelHost.appendChild(div);
+        const place = () => {
+          const y = m.series.priceToCoordinate(m.value);
+          const tx = chart.timeScale().timeToCoordinate(m.time as any);
+          if (y === null || tx === null) { div.style.display = "none"; return; }
+          div.style.display = "";
+          // Keep the whole text inside the plot: it ends at the newest candle, but never past the chart edges.
+          const hostW = labelHost.clientWidth;
+          const w = div.offsetWidth;
+          const x = Math.min(Math.max(tx as number, w + 6), Math.max(hostW - 6, w + 6));
+          div.style.left = `${x}px`;
+          div.style.top = `${y - 17}px`;
+          div.style.transform = "translateX(-100%)";
+        };
+        place();
+        chart.timeScale().subscribeVisibleLogicalRangeChange(place);
+        labelCleanups.push(() => div.remove());
+      }
+
       cleanup = () => {
+        for (const f of labelCleanups) f();
         const range = chart.timeScale().getVisibleLogicalRange();
         if (range) viewRef.current = { from: range.from, to: range.to };
         const pr = chart.priceScale("right").getVisibleRange();
