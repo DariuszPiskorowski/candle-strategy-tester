@@ -343,11 +343,13 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
 
       // Draw the range counter just above its bound line, ending at the newest candle so it cannot be clipped.
       const labelHost = el.querySelector("canvas")?.parentElement ?? el;
+      const labelDivs: HTMLDivElement[] = [];
       for (const m of rangeLabels) {
         const div = document.createElement("div");
         div.textContent = m.text;
         div.style.cssText = `position:absolute;pointer-events:none;white-space:nowrap;font:600 11px 'IBM Plex Sans',system-ui,sans-serif;color:${isDark ? "#ffc107" : "#8a5a00"};text-shadow:0 1px 3px ${isDark ? "rgba(0,0,0,.9)" : "rgba(255,255,255,.9)"}`;
         labelHost.appendChild(div);
+        labelDivs.push(div);
         const place = () => {
           const y = m.series.priceToCoordinate(m.value);
           const tx = chart.timeScale().timeToCoordinate(m.time as any);
@@ -358,7 +360,14 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
           const w = div.offsetWidth;
           const x = Math.min(Math.max(tx as number, w + 6), Math.max(hostW - 6, w + 6));
           div.style.left = `${x}px`;
-          div.style.top = `${y - 17}px`;
+          // When both counters sit on the same line, stack them instead of overlapping.
+          let top = y - 17;
+          for (const other of labelDivs) {
+            if (other === div || other.style.display === "none") continue;
+            const oTop = parseFloat(other.style.top);
+            if (Number.isFinite(oTop) && Math.abs(oTop - top) < 15) top = oTop + 16;
+          }
+          div.style.top = `${top}px`;
           div.style.transform = "translateX(-100%)";
         };
         place();
