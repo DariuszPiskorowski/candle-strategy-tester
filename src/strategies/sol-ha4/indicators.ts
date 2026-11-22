@@ -82,7 +82,7 @@ export function rangeDetector(candles: Candle[], p: Record<string, number | stri
   }), adxLen);
   const close = candles.map(c => c.close), slopeEma = emaSeries(close, len("slopeEmaLen", 38));
   const bbw: number[] = [], raw: number[] = [], score: number[] = [];
-  const inRange: boolean[] = [], lower: number[] = [], upper: number[] = [];
+  const inRange: boolean[] = [], lower: number[] = [], upper: number[] = [], dwells: number[] = [], streaks: number[] = [];
   let range = false, streak = 0, dwell = 0, lo = NaN, hi = NaN;
   for (let i = 0; i < candles.length; i++) {
     const c = candles[i];
@@ -124,7 +124,7 @@ export function rangeDetector(candles: Candle[], p: Record<string, number | stri
         }
       }
     }
-    inRange.push(range); lower.push(lo); upper.push(hi);
+    inRange.push(range); lower.push(lo); upper.push(hi); dwells.push(dwell); streaks.push(streak);
   }
-  return { inRange, lower, upper, score };
+  return { inRange, lower, upper, score, dwells, streaks };
 }

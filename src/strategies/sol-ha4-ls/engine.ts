@@ -96,11 +96,32 @@ export function runSolHa4LS(candles: Candle[], p: Record<string, number|string|b
     trades.push({side:pos.side,entryTime:candles[pos.idx].time,entryPrice:pos.price,exitTime:last.time,exitPrice:last.close,qty:pos.qty,notional:pos.notional,stop:pos.stop,exitReason:'Otwarta',pnl,pnlPct:pnl/pos.notional*100,commission:pos.fee,bars:candles.length-1-pos.idx});
   }
   if(bool('showStop',true)) for(const side of ['BUY','SELL'] as const) plots.push({title:`Stop loss (${side})`,stopSide:side,color:colors.find(c=>c.key==='stop')?.value??'#ff9800',width:1,data:stops[side]});
+  // Range filter preview: box bounds from range start, extended by the minimum bars left (presentation only).
+  let rangeCounter:StrategyResult['rangeCounter'];
+  const last0=candles.at(-1);
+  if(j>=0&&last0) {
+    const parts:string[]=[];
+    for(const [name,on,r,dw,cf] of [['BUY',bool('useRngL',true),rangeL,len('dwellL',32),len('confL',4)],['SELL',bool('useRngS',true),rangeS,len('dwellS',36),len('confS',4)]] as const) {
+      if(!on||!r.inRange[j])continue;
+      let s0=j; while(s0>0&&r.inRange[s0-1])s0--;
+      const left=Math.max(dw-r.dwells[j],cf-r.streaks[j],1);
+      parts.push(`${name}: min. ${left}`);
+      const endT=candles[j].time+left*interval;
+      for(const lvl of [r.upper[j],r.lower[j]]) {
+        const data:{time:number;value:number}[]=[];
+        for(let k=s0;k<candles.length;k++)data.push({time:candles[k].time,value:lvl});
+        for(let t=last0.time+interval;t<=endT;t+=interval)data.push({time:t,value:lvl});
+        plots.push({title:`Boczniak ${name}`,color:'rgba(255,193,7,0.9)',width:1,data});
+      }
+    }
+    if(parts.length)rangeCounter={time:last0.time,text:`Boczniak ${parts.join(' · ')} św.`};
+  }
   const stats=spotStats(candles,trades,equity,header,cash,0,dd);
   const unrealized=pos&&last?floating(pos,last.close):0, positionValue=pos&&last?pos.qty*last.close:0;
   stats.positionSide=pos?.side??null; stats.signalExits=trades.filter(t=>t.exitReason==='Strategy BUY'||t.exitReason==='Strategy SELL').length;
   return {trades,equity,plots,stats,
     derivatives:{exchangeLeverage:leverage,targetLong:num('targetL',1.5),targetShort:num('targetS',1.5),marginMode:'cross',positionQty:pos?.qty??0,positionValue,marginUsed:positionValue/leverage,unrealizedPnl:unrealized,liquidationPrice:pos?.liquidation??NaN,liquidations:trades.filter(t=>t.exitReason==='LIQUIDATION').length,fundingIncluded:false},
+    rangeCounter,
     status:bool('showTable',true)?pos?`${pos.side} SOL`:'Poza rynkiem (USDC)':undefined,
     latestSignals:bool('showTable',true)?[
       {name:'HA 4H — BUY',signal:j<0?'BRAK DANYCH':greenL[j]?'BUY':'SELL'},

@@ -259,6 +259,7 @@ export function TradingChart({ candles, indicators, chartType, strategy, showPlo
                       },
                 ]),
           ])
+          .concat(strategy.rangeCounter ? [{ time: strategy.rangeCounter.time, position: "aboveBar" as const, color: "#ffc107", shape: "circle" as const, size: 0.5, text: strategy.rangeCounter.text }] as any : [])
           .sort((a, b) => a.time - b.time);
         lc.createSeriesMarkers(main, markers.map((m) => ({ ...m, time: m.time })) as any);
         for (const t of strategy.trades) {

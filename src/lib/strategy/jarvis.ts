@@ -202,6 +202,8 @@ export type StrategyResult = {
   candleColors?: { time: number; color: string }[] | undefined;
   backgrounds?: { time: number; color: string }[] | undefined;
   status?: string | undefined;
+  /** Presentation only: label above the newest candle (e.g. remaining range-filter bars). */
+  rangeCounter?: { time: number; text: string } | undefined;
   derivatives?: {
     exchangeLeverage: number; targetLong: number; targetShort: number; marginMode: "cross" | "isolated";
     positionQty: number; positionValue: number; marginUsed: number; unrealizedPnl: number;
