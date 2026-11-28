@@ -1,5 +1,6 @@
 import type { Candle } from "@/lib/candles";
 import { indicatorSignal, type IndicatorSignal } from "./signals.ts";
+import type { EntrySignal } from "../../strategies/sol-ha4-ls/entry-signal.ts";
 
 /* ---------- Pine source helpers ---------- */
 
@@ -207,6 +208,7 @@ export type StrategyResult = {
   plots: LinePlot[];
   /** Read-only states on the latest tested candle, independent of plot visibility. */
   latestSignals?: IndicatorSignal[];
+  entrySignal?: EntrySignal | undefined;
   candleColors?: { time: number; color: string }[] | undefined;
   backgrounds?: { time: number; color: string }[] | undefined;
   status?: string | undefined;

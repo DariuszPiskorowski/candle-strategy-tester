@@ -5,6 +5,7 @@ import type { StrategyEngine } from '../types.ts';
 import { dailyHa, rangeDetector, smoothedHa, rma, trueRanges } from '../sol-ha4/indicators.ts';
 import { spotStats } from '../sol-ha4/simulation.ts';
 import { estimatedLiquidation, positionQty } from './sizing.ts';
+import { entrySignal } from './entry-signal.ts';
 
 export function runSolHa4LS(candles: Candle[], p: Record<string, number|string|boolean>, header: PineHeader, colors: StrategyColor[] = [], options: BacktestOptions = {}): StrategyResult {
   const now=options.endTime ?? Math.floor(Date.now()/1000);
@@ -121,7 +122,17 @@ export function runSolHa4LS(candles: Candle[], p: Record<string, number|string|b
   stats.positionSide=pos?.side??null; stats.signalExits=trades.filter(t=>t.exitReason==='Strategy BUY'||t.exitReason==='Strategy SELL').length;
   return {trades,equity,plots,stats,
     derivatives:{exchangeLeverage:leverage,targetLong:num('targetL',1.5),targetShort:num('targetS',1.5),marginMode:'cross',positionQty:pos?.qty??0,positionValue,marginUsed:positionValue/leverage,unrealizedPnl:unrealized,liquidationPrice:pos?.liquidation??NaN,liquidations:trades.filter(t=>t.exitReason==='LIQUIDATION').length,fundingIncluded:false},
-    status:bool('showTable',true)?pos?`${pos.side} SOL`:'Poza rynkiem (USDC)':undefined,
+    entrySignal:bool('showTable',true)?entrySignal({
+      enabled:bool('useLong',true), ha4h:j>=0&&greenL[j],
+      dailyHa:!bool('useDayL',true)||(j>=0&&dayL[j]===true),
+      range:bool('useRngL',true)&&j>=0&&rangeL.inRange[j], afterStop:waitL,
+      quantity:j>=0?positionQty(cash,candles[j].close,num('targetL',1.5),leverage,num('qtyStep',0.1),num('minQty',0.1)):0,
+    },{
+      enabled:bool('useShort',true), ha4h:j>=0&&!greenS[j],
+      dailyHa:!bool('useDayS',true)||(j>=0&&dayS[j]===false),
+      range:bool('useRngS',true)&&j>=0&&rangeS.inRange[j], afterStop:waitS,
+      quantity:j>=0?positionQty(cash,candles[j].close,num('targetS',1.5),leverage,num('qtyStep',0.1),num('minQty',0.1)):0,
+    },{hasData:j>=0,inWindow:j>=0&&candles[j].time>=start,accountBusy:pos!==null}):undefined,
     latestSignals:bool('showTable',true)?[
       {name:'HA 4H — BUY',signal:j<0?'BRAK DANYCH':greenL[j]?'BUY':'SELL'},
       {name:'HA 4H — SELL',signal:j<0?'BRAK DANYCH':greenS[j]?'BUY':'SELL'},

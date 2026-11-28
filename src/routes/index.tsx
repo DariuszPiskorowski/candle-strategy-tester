@@ -51,6 +51,15 @@ const DEFAULTS: IndicatorSettings = {
   macd: { on: false, fast: 12, slow: 26, signal: 9 },
 };
 
+const ENTRY_BLOCKERS = {
+  disabled: 'wyłączone', ha4h: 'HA 4H', dailyHa: 'HA dzienny',
+  range: 'boczniak', afterStop: 'blokada po SL', quantity: 'wielkość zlecenia',
+};
+const ENTRY_COMMON = {
+  noData: 'Brak zamkniętej świecy', outsideWindow: 'Poza okresem testu',
+  accountBusy: 'Nowe wejście zablokowane',
+};
+
 function Index() {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [raw, setRaw] = useState<Candle[]>([]);
@@ -633,7 +642,23 @@ function Index() {
                   ))}
                 </ul>
               )}
-              {result?.status && <div className="text-foreground">{result.status}</div>}
+              {result?.entrySignal ? (
+                <div aria-label="Sygnał wejścia strategii" className="mt-1 max-w-64 whitespace-normal">
+                  <div className={result.entrySignal.signal === 'BUY' ? 'font-semibold text-bull' : result.entrySignal.signal === 'SELL' ? 'font-semibold text-bear' : 'font-semibold text-signal-neutral'}>
+                    {result.entrySignal.signal}
+                  </div>
+                  {result.entrySignal.signal === 'CZEKAJ' && (
+                    <div className="space-y-0.5 text-muted-foreground">
+                      {result.entrySignal.common.map(reason => <div key={reason}>{ENTRY_COMMON[reason]}</div>)}
+                      {!result.entrySignal.common.includes('noData') && (['buy', 'sell'] as const).map(side => (
+                        result.entrySignal?.[side].length ? <div key={side}>
+                          {side.toUpperCase()}: {result.entrySignal[side].map(reason => ENTRY_BLOCKERS[reason]).join(', ')}
+                        </div> : null
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : result?.status && <div className="text-foreground">{result.status}</div>}
             </div>
           )}
           {error && (
